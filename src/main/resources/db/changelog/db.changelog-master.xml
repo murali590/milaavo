@@ -10,5 +10,7 @@
              relativeToChangelogFile="true"/>
     <include file="changes/002-create-app-user-table.xml"
          relativeToChangelogFile="true"/>
+    <include file="changes/003-create-otp-challenge-table.xml"
+         relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

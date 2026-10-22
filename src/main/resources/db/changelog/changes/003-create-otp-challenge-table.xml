@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="003-create-otp-challenge-table" author="milaavo">
+        <createTable tableName="otp_challenge">
+            <column name="id" type="UUID">
+                <constraints
+                    primaryKey="true"
+                    primaryKeyName="pk_otp_challenge"
+                    nullable="false"/>
+            </column>
+
+            <column name="user_id" type="UUID">
+                <constraints
+                    nullable="false"
+                    foreignKeyName="fk_otp_challenge_user"
+                    references="app_user(id)"/>
+            </column>
+
+            <column name="purpose" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="otp_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="failed_attempts" type="INTEGER"
+                    defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="consumed_at"
+                    type="TIMESTAMP WITH TIME ZONE"/>
+
+            <column name="created_at"
+                    type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex
+            tableName="otp_challenge"
+            indexName="idx_otp_challenge_user_created">
+            <column name="user_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
+
