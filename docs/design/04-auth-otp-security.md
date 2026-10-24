@@ -158,4 +158,4 @@ It is wired in `SecurityConfig` with `.jwt(jwt -> jwt.jwtAuthenticationConverter
 | TLS | Expected to terminate at the load balancer or ingress (Proposed, [08](08-configuration-deployment.md)) |
 | Mobile number normalization (G-14) | Only `trim()`. `+91 98…`, `098…` and `98…` become different accounts. Normalize to E.164 (for example with libphonenumber) before the uniqueness check |
 | Account enumeration | Register 409 reveals existing numbers (see [03](03-api.md)) |
-| Unknown `userId` returns 500 (G-07) | Also lets anyone probe whether a user id exists (500 versus 409/429) |
+| Unknown `userId` on verify/resend (G-07) | Fixed: returns 400 `INVALID_VERIFICATION_REQUEST` with a generic message, so user ids can't be probed through a 500 |

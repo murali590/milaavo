@@ -16,6 +16,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import com.milaavo.auth.exception.UserAlreayActiveException;
+import com.milaavo.auth.exception.InvalidVerificationRequestException;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -188,5 +189,17 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .status(HttpStatus.TOO_MANY_REQUESTS)
                                 .body(response);
+        }
+
+        @ExceptionHandler(InvalidVerificationRequestException.class)
+        public ResponseEntity<ApiErrorResponse> handleInvalidVerificationRequestException(
+                        InvalidVerificationRequestException ex) {
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.BAD_REQUEST.value(),
+                                "INVALID_VERIFICATION_REQUEST",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 }

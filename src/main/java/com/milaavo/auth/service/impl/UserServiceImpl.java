@@ -31,6 +31,7 @@ import com.milaavo.otp.service.OtpService;
 
 import com.milaavo.auth.dto.ResentVerificationOTPRequest;
 import com.milaavo.auth.dto.ResentVerificationOTPResponse;
+import com.milaavo.auth.exception.InvalidVerificationRequestException;
 import com.milaavo.auth.exception.UserAlreayActiveException;
 import com.milaavo.otp.exception.OtpResendRateLimitException;
 
@@ -117,7 +118,7 @@ public class UserServiceImpl implements UserService {
         @Transactional
         public void verifyMobileOtp(VerifyMobileOtpRequest request) {
                 User user = userRepository.findById(request.getUserId())
-                                .orElseThrow(() -> new IllegalArgumentException(
+                                .orElseThrow(() -> new InvalidVerificationRequestException(
                                                 "Invalid verification request"));
 
                 if (user.isMobileVerified()
@@ -142,7 +143,7 @@ public class UserServiceImpl implements UserService {
                         ResentVerificationOTPRequest request) {
 
                 User user = userRepository.findByIdForUpdate(request.getUserId())
-                                .orElseThrow(() -> new IllegalArgumentException(
+                                .orElseThrow(() -> new InvalidVerificationRequestException(
                                                 "Invalid verification request"));
 
                 if (user.isMobileVerified()

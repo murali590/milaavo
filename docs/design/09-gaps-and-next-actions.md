@@ -14,7 +14,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-03 | P1 | Outbox | No claim token or version. A stale worker overwrites a reclaimed row | P-4, conditional `UPDATE … WHERE claim_token = ?` |
 | G-04 | P1 | Outbox | Recovery cutoff hard-coded at 2 min, unrelated to any provider timeout | Configurable lease, much larger than the provider timeout |
 | G-05 | P1 | Outbox | Poison message loops forever (attempt increment rolled back, recovery does not count) | Count the attempt at claim time, cap recoveries |
-| G-07 | P1 | API | Unknown `userId` on verify/resend → `IllegalArgumentException` → 500 | Map it to 400 with a generic message (or a dedicated exception) |
+| ~~G-07~~ | ✅ Done | API | ~~Unknown `userId` on verify/resend → `IllegalArgumentException` → 500~~ | **Fixed (24 Oct 2026):** dedicated `InvalidVerificationRequestException` → 400 `INVALID_VERIFICATION_REQUEST` with a generic message |
 | G-08 | P1 | API | Concurrent register with the same number → unique violation → 500 | Catch `DataIntegrityViolationException` on that constraint → 409 |
 | G-09 | P1 | Config | Only `LocalSmsSender` (`@Profile("local")`) exists, so the app cannot start in any other profile | Real provider sender, or a `@ConditionalOnMissingBean` no-op/fail-closed sender |
 | G-15 | P1 | Security | No per-IP, per-prefix or global limits on `register` and resend. SMS pumping risk | Rate limiter (Bucket4j / gateway), CAPTCHA after N attempts, prefix allow-list |
@@ -51,7 +51,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 1. ~~**G-06 report ownership.**~~ ✅ Done. A strong interview example of "authentication is not authorization".
 2. **G-02, G-05, G-03, G-04 outbox refactor**, as one change. It is the core distributed-systems story of this project.
 3. **G-01 OTP at rest**, together with the outbox refactor, since it touches the same table.
-4. **G-07, G-08, G-11, G-22 error mapping.** Quick wins, a few lines each.
+4. **Error mapping:** ~~G-07~~ ✅ done; G-08, G-11, G-22 next. Quick wins, a few lines each.
 5. **G-15 rate limiting**, then **G-23 observability**.
 6. **G-25 test session**, which also locks in everything above.
 7. The remaining P2 cleanup items.

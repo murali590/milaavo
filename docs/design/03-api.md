@@ -23,6 +23,7 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 | `INVALID_REQUEST_BODY` | 400 | Missing or malformed JSON, wrong JSON types |
 | `INVALID_PARAMETER` | 400 | Path or query parameter cannot be converted, for example a non-UUID `{id}` |
 | `INVALID_OTP` | 400 | OTP wrong, expired, already used, superseded, or locked |
+| `INVALID_VERIFICATION_REQUEST` | 400 | Verify or resend with a `userId` that doesn't exist |
 | `UNAUTHORIZED` | 401 | No token, or an invalid or expired token |
 | `INVALID_CREDENTIALS` | 401 | Login with an unknown mobile number or a wrong password (same message for both) |
 | `FORBIDDEN` | 403 | Login before verification, or a security access denial |
@@ -32,7 +33,7 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 | `TOO_MANY_REQUESTS` | 429 | Resend cooldown or window limit hit |
 | `INTERNAL_SERVER_ERROR` | 500 | Anything else. Logged with a stack trace, never returned to the client |
 
-> **Gap G-07 / G-22:** some client errors end up as 500 because the catch-all `Exception` handler catches them. Examples: an unknown `userId` on verify/resend (`IllegalArgumentException`), a register race on the unique constraint (`DataIntegrityViolationException`, G-08), and an over-length report field. Spring's own 404 (no route) and 405 (wrong method) exceptions are probably caught by the catch-all too. Verify this and map them explicitly.
+> **Gap G-22:** some client errors end up as 500 because the catch-all `Exception` handler catches them. Examples: a register race on the unique constraint (`DataIntegrityViolationException`, G-08), and an over-length report field. Spring's own 404 (no route) and 405 (wrong method) exceptions are probably caught by the catch-all too. Verify this and map them explicitly.
 
 ## Auth endpoints (public)
 
@@ -66,7 +67,7 @@ Errors: 400, 409 `MOBILE_NUMBER_ALREADY_REGISTERED`.
 
 `otp` must match `\d{6}`. On success the user becomes `ACTIVE` with `mobileVerified = true`.
 
-Errors: 400 `INVALID_OTP` (the message says which: invalid, expired, already used, max attempts), 409 `USER_ALREADY_ACTIVE`, 500 for an unknown `userId` (G-07).
+Errors: 400 `INVALID_OTP` (the message says which: invalid, expired, already used, max attempts), 400 `INVALID_VERIFICATION_REQUEST` for an unknown `userId`, 409 `USER_ALREADY_ACTIVE`.
 
 ### `POST /api/auth/verify/resend-otp` → 200
 
@@ -78,7 +79,7 @@ Response: `{ "challengeId": "…" }`. The previous challenge is superseded, so o
 
 Limits (configurable): at least 60 s since the last resend, and at most 3 resends in 15 minutes. The initial registration OTP does not count as a resend.
 
-Errors: 409 `USER_ALREADY_ACTIVE`, 429 `TOO_MANY_REQUESTS`, 500 for an unknown `userId` (G-07).
+Errors: 400 `INVALID_VERIFICATION_REQUEST` for an unknown `userId`, 409 `USER_ALREADY_ACTIVE`, 429 `TOO_MANY_REQUESTS`.
 
 ### `POST /api/auth/login` → 200
 
