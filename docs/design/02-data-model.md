@@ -113,7 +113,7 @@ Index: `idx_otp_resend_attempt_user_requested (user_id, requested_at)`. It serve
 | `mobile_number` | VARCHAR(20) | NOT NULL | |
 | `message` | VARCHAR(1000) | NOT NULL | **Contains the plaintext OTP** (Gap G-01) |
 | `status` | VARCHAR(20) | NOT NULL, default `PENDING` | `PENDING`, `PROCESSING`, `SENT`, `FAILED`. No CHECK constraint |
-| `attempt_count` | INT | NOT NULL, default 0 | Incremented when a send starts, inside the send transaction |
+| `attempt_count` | INT | NOT NULL, default 0 | Attempts **started**: incremented in the claim transaction, which commits before the send (G-05) |
 | `next_attempt_at` | TIMESTAMPTZ | NOT NULL | Earliest time the row can be claimed |
 | `processing_started_at` | TIMESTAMPTZ | nullable | Set on claim, cleared on outcome. Used by recovery |
 | `sent_at` | TIMESTAMPTZ | nullable | |

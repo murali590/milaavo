@@ -21,7 +21,7 @@ public class SmsOutboxRecoveryService {
         Instant cutoff = Instant.now().minus(2, ChronoUnit.MINUTES);
 
         int recovered =
-                smsOutboxRepository.recoverStaleProcessingMessages(cutoff);
+                smsOutboxRepository.recoverStaleProcessingMessages(cutoff, SmsOutboxStateService.MAX_ATTEMPTS);
 
         if (recovered > 0) {
             log.warn("Recovered {} stale SMS outbox messages", recovered);

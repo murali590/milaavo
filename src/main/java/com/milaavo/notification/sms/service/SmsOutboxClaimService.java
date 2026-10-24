@@ -27,6 +27,7 @@ public class SmsOutboxClaimService {
         for (SmsOutbox message : messages) {
             message.setStatus(SmsOutboxStatus.PROCESSING);
             message.setProcessingStartedAt(Instant.now());
+            message.setAttemptCount(message.getAttemptCount()+1);
         }
 
         smsOutboxRepository.saveAll(messages);

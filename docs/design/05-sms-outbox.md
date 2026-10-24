@@ -67,6 +67,8 @@ Recovery (`@Scheduled` every 30 s): `UPDATE … SET status='PENDING', next_attem
 
 Plus up to 5 s of poll delay per hop. There is no jitter.
 
+> **Update 24 Oct 2026 (G-02 done):** the provider call now happens with no transaction open. `SmsOutboxProcessor` calls `SmsOutboxStateService.loadForSending`, then `smsSender.send`, then `markSent` or `recordFailure`, each a short transaction. The sequence diagram above shows the old flow. F1 (slow provider holding connections) is fixed; F2 and F7 remain, because at-least-once delivery can't be avoided.
+
 ## Failure modes
 
 | # | Scenario | What happens today | Result | Gap |
@@ -74,7 +76,7 @@ Plus up to 5 s of poll delay per hop. There is no jitter.
 | F1 | Provider is slow | DB connection and transaction stay open for the whole send. 50 slow sends in sequence block the single scheduler thread | Pool pressure. Recovery also waits, because it shares the scheduler thread | G-02, G-21 |
 | F2 | Send succeeds, then the commit fails or the app crashes | TX3 rolls back, so the row stays `PROCESSING` (TX2 committed it), with no attempt counted | Recovered after 2 min and **sent again** | G-02 |
 | F3 | Send takes more than 2 min (or the instance freezes during a GC pause) | Another instance's recovery resets the row, and worker B claims and sends it. Worker A then finishes and overwrites B's state with its own stale entity | Duplicate SMS, and a lost update on the row | G-03, G-04 |
-| F4 | Message reliably crashes the processor (poison message) | Every crash rolls back the attempt increment. Recovery does not increment either | Loops forever, about once every 2.5 min | G-05 |
+| F4 | Message reliably crashes the processor (poison message) | **Fixed (G-05):** the attempt is counted at claim, and recovery fails the row at the limit | Stops after 5 attempts | ~~G-05~~ ✅ |
 | F5 | Provider outage longer than ~30 s | All messages reach `FAILED` quickly | Lost OTPs until users resend | G-17 |
 | F6 | Retries continue past OTP expiry | A message retried at minute 4 delivers a code that expires seconds later | Wasted SMS cost, confused users | G-17 |
 | F7 | Provider accepts, but the client times out | Treated as a failure and retried | Duplicate SMS | G-02 |

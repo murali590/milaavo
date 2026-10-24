@@ -1,84 +1,35 @@
-
 package com.milaavo.notification.sms.service;
 
 import com.milaavo.notification.sms.entity.SmsOutbox;
-import com.milaavo.notification.sms.enums.SmsOutboxStatus;
-import com.milaavo.notification.sms.repository.SmsOutboxRepository;
-
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class SmsOutboxProcessor {
 
-    private static final int MAX_ATTEMPTS = 5;
-
-    private final SmsOutboxRepository smsOutboxRepository;
+    private final SmsOutboxStateService stateService;
     private final SmsSender smsSender;
 
-    @Transactional
+    // Not @Transactional on purpose: no DB connection is held during the provider call.
     public void process(UUID messageId) {
-        SmsOutbox message = smsOutboxRepository.findById(messageId)
-                .orElse(null);
-
-        if (message == null
-                || message.getStatus() != SmsOutboxStatus.PROCESSING) {
+        Optional<SmsOutbox> loaded = stateService.loadForSending(messageId);
+        if (loaded.isEmpty()) {
             return;
         }
 
-        message.setAttemptCount(message.getAttemptCount() + 1);
+        SmsOutbox message = loaded.get();
 
         try {
-            smsSender.send(
-                    message.getMobileNumber(),
-                    message.getMessage()
-            );
-
-            message.setStatus(SmsOutboxStatus.SENT);
-            message.setSentAt(Instant.now());
-            message.setLastError(null);
-
+            smsSender.send(message.getMobileNumber(), message.getMessage());
         } catch (Exception ex) {
-            String error = ex.getMessage() == null
-                    ? "SMS delivery failed"
-                    : ex.getMessage();
-
-            message.setLastError(
-                    error.length() > 500
-                            ? error.substring(0, 500)
-                            : error
-            );
-
-            if (message.getAttemptCount() >= MAX_ATTEMPTS) {
-                message.setStatus(SmsOutboxStatus.FAILED);
-            } else {
-                message.setStatus(SmsOutboxStatus.PENDING);
-
-                long retryDelaySeconds =
-                        1L << message.getAttemptCount();
-
-                message.setNextAttemptAt(
-                        Instant.now().plusSeconds(retryDelaySeconds)
-                );
-            }
-           
-            log.warn(
-                    "SMS delivery failed for outbox ID {}. Attempt {} of {}",
-                    message.getId(),
-                    message.getAttemptCount(),
-                    MAX_ATTEMPTS
-            );
+            stateService.recordFailure(messageId, ex);
+            return;
         }
 
-        message.setProcessingStartedAt(null);
-        smsOutboxRepository.save(message);
+        stateService.markSent(messageId);
     }
 }

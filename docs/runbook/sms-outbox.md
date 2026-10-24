@@ -95,7 +95,9 @@ Both are at-least-once delivery. For an OTP the second copy is harmless if it ca
 
 ### A row keeps cycling between PROCESSING and PENDING
 
-The processor's attempt increment is rolled back when the transaction fails, and recovery does not increment `attempt_count`. A message that crashes the processor therefore loops forever (Gap G-05). Mitigation until fixed: mark it failed by hand.
+Since the G-05 fix, each claim counts an attempt, so a message that keeps crashing the worker stops by itself: after 5 claims, recovery marks it `FAILED` with `last_error = 'Recovered stale processing message'`. If you see many of these, a message or the provider SDK is crashing the worker. Check the app log for `Error`s, not just `Exception`s.
+
+If you need to stop one immediately, mark it failed by hand:
 
 ```sql
 UPDATE sms_outbox

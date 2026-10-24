@@ -13,7 +13,8 @@ This page lists every transaction boundary in the code, what it protects, and th
 | `OtpServiceImpl.issueOtp` | `@jakarta.transaction.Transactional` | Supersede + insert + enqueue | Uses the JTA annotation, unlike the rest of the code (G-19). Spring honors it, but it lacks `readOnly`, isolation and similar attributes. Standardize on Spring's |
 | `OtpVerificationTransaction.verify` | `@Transactional(REQUIRES_NEW)` | Failed-attempt counter survives the caller's rollback | See [04](04-auth-otp-security.md#verify-otpverificationtransactionverify) |
 | `SmsOutboxClaimService.claimPendingMessages` | `@Transactional` | `SKIP LOCKED` select + mark `PROCESSING` | Row locks are held only for this short transaction |
-| `SmsOutboxProcessor.process` | `@Transactional` | Outcome write | **Wraps the network call** (G-02) |
+| `SmsOutboxProcessor.process` | none (on purpose) | | Calls the SMS provider with no transaction open (G-02 fix) |
+| `SmsOutboxStateService.loadForSending` / `markSent` / `recordFailure` | `@Transactional` (short) | Read before send, write the result after | Separate bean so the proxy applies. Called as `this.markSent()` from the processor, the annotation would be ignored and the status never saved |
 | `SmsOutboxRecoveryService.recoverStaleMessages` | `@Transactional` | Bulk reset | A single `UPDATE` |
 | `ReportServiceImpl.create/update/delete` | `@Transactional` | Single-entity writes | |
 | `ReportServiceImpl.getAll/getById` | `@Transactional(readOnly = true)` | Consistent read | Added with G-06. `readOnly` lets Hibernate skip dirty checking |

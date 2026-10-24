@@ -10,10 +10,10 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 |---|---|---|---|---|
 | G-01 | P0 | OTP / SMS | Plaintext OTP stored in `sms_outbox.message` and never removed | Encrypt or template the message, null it after completion, add retention ([05](05-sms-outbox.md#changes-in-order) item 10) |
 | ~~G-06~~ | ✅ Done | Reports | ~~No `owner_id`. Any authenticated user can read, update or delete any report (BOLA)~~ | **Fixed (24 Oct 2026):** changeset 008 adds `owner_id`. `AuthUser` + `@CurrentUser` give the logged-in user to controllers. All report queries filter by owner, and other users' reports return 404 |
-| G-02 | P1 | Outbox | `smsSender.send()` runs inside `@Transactional` `process()` | Non-transactional orchestrator + short state transactions |
+| ~~G-02~~ | ✅ Done | Outbox | ~~`smsSender.send()` runs inside `@Transactional` `process()`~~ | **Fixed (24 Oct 2026):** `SmsOutboxProcessor` has no transaction. `SmsOutboxStateService` (separate bean) has short `loadForSending` / `markSent` / `recordFailure` transactions. Proved with `pg_stat_activity`: no more "idle in transaction" during a slow send |
 | G-03 | P1 | Outbox | No claim token or version. A stale worker overwrites a reclaimed row | P-4, conditional `UPDATE … WHERE claim_token = ?` |
 | G-04 | P1 | Outbox | Recovery cutoff hard-coded at 2 min, unrelated to any provider timeout | Configurable lease, much larger than the provider timeout |
-| G-05 | P1 | Outbox | Poison message loops forever (attempt increment rolled back, recovery does not count) | Count the attempt at claim time, cap recoveries |
+| ~~G-05~~ | ✅ Done | Outbox | ~~Poison message loops forever (attempt increment rolled back, recovery does not count)~~ | **Fixed (24 Oct 2026):** attempt counted in the claim transaction (`attempt_count` = attempts started). Recovery sets `FAILED` once `attempt_count >= MAX_ATTEMPTS`. Accepted trade-off: a crash before the send still uses up an attempt (same as SQS receive count) |
 | ~~G-07~~ | ✅ Done | API | ~~Unknown `userId` on verify/resend → `IllegalArgumentException` → 500~~ | **Fixed (24 Oct 2026):** dedicated `InvalidVerificationRequestException` → 400 `INVALID_VERIFICATION_REQUEST` with a generic message |
 | ~~G-08~~ | ✅ Done | API | ~~Concurrent register with the same number → unique violation → 500~~ | **Fixed (24 Oct 2026):** `saveAndFlush` inside try/catch. Only `uk_app_user_mobile_number` is mapped to 409; other integrity errors still give 500. Verified with two parallel curls (201 + 409) |
 | G-09 | P1 | Config | Only `LocalSmsSender` (`@Profile("local")`) exists, so the app cannot start in any other profile | Real provider sender, or a `@ConditionalOnMissingBean` no-op/fail-closed sender |
@@ -39,9 +39,9 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | # | Action from the design PDF | Status after code review |
 |---|---|---|
 | 1 | Confirm the native claim query no longer has `@Lock` | **Done.** `SmsOutboxRepository.claimPendingMessages` uses SQL `FOR UPDATE SKIP LOCKED` with no `@Lock`. (`@Lock` remains on the JPQL queries `findByIdForUpdate` and `findForVerification`, where it is correct) |
-| 2 | Move provider calls outside DB transactions | Open: G-02 |
+| 2 | Move provider calls outside DB transactions | **Done** (G-02) |
 | 3 | Configurable lease, prevent stale-worker updates | Open: G-03, G-04 |
-| 4 | Define retry semantics, timeouts, backoff, idempotency, ambiguous outcomes | Designed in [05](05-sms-outbox.md). Implementation open: G-05, G-17 |
+| 4 | Define retry semantics, timeouts, backoff, idempotency, ambiguous outcomes | Designed in [05](05-sms-outbox.md). G-05 done. Implementation open: G-17 |
 | 5 | Verify OTP expiry, one-time use, attempt limits, rate limits, secure storage | **Verified** for `otp_challenge` ([04](04-auth-otp-security.md)). Open: G-01 (plaintext in outbox), G-15 (IP/global limits) |
 | 6 | Run the manual verification scenarios | Open. Scenarios in [05](05-sms-outbox.md#verification-scenarios) |
 | 7 | README with architecture, env vars, migrations, run commands, endpoints, recovery | **Done.** [README](../../README.md) + [runbook](../runbook/sms-outbox.md) |
@@ -49,7 +49,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 ## Suggested order of work
 
 1. ~~**G-06 report ownership.**~~ ✅ Done. A strong interview example of "authentication is not authorization".
-2. **G-02, G-05, G-03, G-04 outbox refactor**, as one change. It is the core distributed-systems story of this project.
+2. **Outbox refactor**, one step at a time: ~~G-02~~ ✅, ~~G-05~~ ✅, then G-03/G-04. It is the core distributed-systems story of this project.
 3. **G-01 OTP at rest**, together with the outbox refactor, since it touches the same table.
 4. **Error mapping:** ~~G-07~~ ✅, ~~G-08~~ ✅, ~~G-11~~ ✅, ~~G-22~~ ✅ all done.
 5. **G-15 rate limiting**, then **G-23 observability**.
