@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+<changeSet id="008-add-lost-report-owner" author="milaavo">
+    <delete tableName="lost_report"/>
+    <addColumn tableName="lost_report">
+        <column name="owner_id" type="UUID">
+            <constraints nullable="false"
+                         foreignKeyName="fk_lost_report_owner"
+                         references="app_user(id)"/>
+        </column>
+    </addColumn>
+    <createIndex tableName="lost_report" indexName="idx_lost_report_owner_created">
+        <column name="owner_id"/>
+        <column name="created_at"/>
+    </createIndex>
+</changeSet>
+
+</databaseChangeLog>

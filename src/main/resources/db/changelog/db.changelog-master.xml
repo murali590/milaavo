@@ -18,5 +18,7 @@
          relativeToChangelogFile="true"/>
     <include file="changes/007-add-sms-outbox-processing-started-at.xml"
          relativeToChangelogFile="true"/>
-         
+    <include file="changes/008-add-lost-report-owner.xml"
+         relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

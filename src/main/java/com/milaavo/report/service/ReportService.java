@@ -1,21 +1,21 @@
 package com.milaavo.report.service;
 
+import com.milaavo.common.security.AuthUser;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
 import com.milaavo.report.dto.PagedResponse;
-import java.util.UUID;
 
+import java.util.UUID;
 
 public interface ReportService {
 
-    CreateReportResponse createReport(CreateReportRequest request);
+    CreateReportResponse createReport(AuthUser currentUser, CreateReportRequest request);
 
-    PagedResponse<CreateReportResponse> getAllReports(int page, int size);
+    PagedResponse<CreateReportResponse> getAllReports(AuthUser currentUser, int page, int size);
 
-    CreateReportResponse getReportById(UUID id);
+    CreateReportResponse getReportById(AuthUser currentUser, UUID id);
 
-    CreateReportResponse updateReport(UUID id, CreateReportRequest request);
+    CreateReportResponse updateReport(AuthUser currentUser, UUID id, CreateReportRequest request);
 
-    void deleteReport(UUID id);
-
+    void deleteReport(AuthUser currentUser, UUID id);
 }

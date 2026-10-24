@@ -1,25 +1,27 @@
 package com.milaavo.report.controller;
 
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.ResponseEntity;
-import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.RequestBody;
+import com.milaavo.common.security.AuthUser;
+import com.milaavo.common.security.CurrentUser;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.milaavo.report.dto.PagedResponse;
 import com.milaavo.report.service.ReportService;
-
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import com.milaavo.report.dto.PagedResponse;
-import org.springframework.web.bind.annotation.RequestParam;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Max;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.util.UUID;
 
 @RestController
@@ -30,37 +32,46 @@ public class ReportController {
     private ReportService reportService;
 
     @PostMapping
-    public ResponseEntity<CreateReportResponse> createReport(@Valid @RequestBody CreateReportRequest request) {
-        
-        CreateReportResponse response = reportService.createReport(request);
-        return ResponseEntity.status( HttpStatus.CREATED).body(response);
-    }
+    public ResponseEntity<CreateReportResponse> createReport(
+            @CurrentUser AuthUser currentUser,
+            @Valid @RequestBody CreateReportRequest request) {
 
+        CreateReportResponse response = reportService.createReport(currentUser, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @GetMapping
     public ResponseEntity<PagedResponse<CreateReportResponse>> getAllReports(
-        @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page number must be at least 0") int page,
-        @RequestParam(defaultValue = "10") @Min(value = 1, message = "Size must be at least 1") @Max(value = 100, message = "Size must be at most 100") int size
-    ) {
-        return ResponseEntity.ok(reportService.getAllReports(page, size));
+            @CurrentUser AuthUser currentUser,
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page number must be at least 0") int page,
+            @RequestParam(defaultValue = "10") @Min(value = 1, message = "Size must be at least 1") @Max(value = 100, message = "Size must be at most 100") int size) {
+
+        return ResponseEntity.ok(reportService.getAllReports(currentUser, page, size));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CreateReportResponse> getReportById(@PathVariable UUID id) {
-        return ResponseEntity.ok(reportService.getReportById(id));
+    public ResponseEntity<CreateReportResponse> getReportById(
+            @CurrentUser AuthUser currentUser,
+            @PathVariable UUID id) {
+
+        return ResponseEntity.ok(reportService.getReportById(currentUser, id));
     }
-    
 
     @PutMapping("/{id}")
-    public ResponseEntity<CreateReportResponse> updateReport(@PathVariable UUID id, @Valid @RequestBody CreateReportRequest request) {  
-        CreateReportResponse response = reportService.updateReport(id, request);
-        return ResponseEntity.ok(response);
-    }
-    
+    public ResponseEntity<CreateReportResponse> updateReport(
+            @CurrentUser AuthUser currentUser,
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateReportRequest request) {
 
-    @DeleteMapping("/{id}") 
-    public ResponseEntity<Void> deleteReport(@PathVariable UUID id) {
-        reportService.deleteReport(id);
+        return ResponseEntity.ok(reportService.updateReport(currentUser, id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteReport(
+            @CurrentUser AuthUser currentUser,
+            @PathVariable UUID id) {
+
+        reportService.deleteReport(currentUser, id);
         return ResponseEntity.noContent().build();
     }
 }

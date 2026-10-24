@@ -5,10 +5,14 @@ import com.milaavo.report.entity.LostReport;
 import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 public interface ReportRepository extends JpaRepository<LostReport, UUID> {
 
-    List<LostReport> findAll();
 
-    Optional<LostReport> findById(UUID id);
+    Optional<LostReport> findByIdAndOwnerId(UUID id, UUID ownerId);
+
+    Page<LostReport> findByOwnerId(UUID ownerId, Pageable pageable);
 }
