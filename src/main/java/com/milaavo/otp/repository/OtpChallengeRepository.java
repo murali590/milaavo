@@ -36,10 +36,11 @@ public interface OtpChallengeRepository
   @Modifying
   @Query("""
       UPDATE OtpChallenge challenge
-      SET challenge.consumedAt = :now
+      SET challenge.supersededAt = :now
       WHERE challenge.user.id = :userId
         AND challenge.purpose = :purpose
         AND challenge.consumedAt IS NULL
+        AND challenge.supersededAt IS NULL
         AND challenge.expiresAt > :now
       """)
   int invalidateActiveChallenges(

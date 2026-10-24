@@ -107,13 +107,17 @@ public class OtpServiceImpl implements OtpService {
                 return;
             }
             case EXPIRED ->
-                throw new InvalidOtpException("OTP has expired");
+                throw new InvalidOtpException("OTP_EXPIRED", "OTP has expired");
             case ALREADY_USED ->
-                throw new InvalidOtpException("OTP has already been used");
+                throw new InvalidOtpException("OTP_ALREADY_USED", "OTP has already been used");
             case MAX_ATTEMPTS_EXCEEDED ->
-                throw new InvalidOtpException("Maximum OTP attempts exceeded");
+                throw new InvalidOtpException("MAX_ATTEMPTS_EXCEEDED", "Maximum OTP attempts exceeded");
             case INVALID, CHALLENGE_NOT_FOUND ->
-                throw new InvalidOtpException("Invalid OTP");
+                throw new InvalidOtpException("INVALID_OTP", "Invalid OTP");
+            case SUPERSEDED ->
+                throw new InvalidOtpException("SUPERSEDED", "This OTP is no longer valid. Please use the latest OTP sent to your mobile");
+            default ->
+                throw new IllegalStateException("Unexpected OTP verification result: " + result);
         }
     }
 }

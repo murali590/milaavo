@@ -15,11 +15,11 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-04 | P1 | Outbox | Recovery cutoff hard-coded at 2 min, unrelated to any provider timeout | Configurable lease, much larger than the provider timeout |
 | G-05 | P1 | Outbox | Poison message loops forever (attempt increment rolled back, recovery does not count) | Count the attempt at claim time, cap recoveries |
 | ~~G-07~~ | ✅ Done | API | ~~Unknown `userId` on verify/resend → `IllegalArgumentException` → 500~~ | **Fixed (24 Oct 2026):** dedicated `InvalidVerificationRequestException` → 400 `INVALID_VERIFICATION_REQUEST` with a generic message |
-| G-08 | P1 | API | Concurrent register with the same number → unique violation → 500 | Catch `DataIntegrityViolationException` on that constraint → 409 |
+| ~~G-08~~ | ✅ Done | API | ~~Concurrent register with the same number → unique violation → 500~~ | **Fixed (24 Oct 2026):** `saveAndFlush` inside try/catch. Only `uk_app_user_mobile_number` is mapped to 409; other integrity errors still give 500. Verified with two parallel curls (201 + 409) |
 | G-09 | P1 | Config | Only `LocalSmsSender` (`@Profile("local")`) exists, so the app cannot start in any other profile | Real provider sender, or a `@ConditionalOnMissingBean` no-op/fail-closed sender |
 | G-15 | P1 | Security | No per-IP, per-prefix or global limits on `register` and resend. SMS pumping risk | Rate limiter (Bucket4j / gateway), CAPTCHA after N attempts, prefix allow-list |
 | G-17 | P1 | Outbox | Retries finish in ~30 s and ignore OTP expiry | `expires_at` on outbox rows, backoff with jitter and a cap |
-| G-11 | P2 | API | `CreateReportRequest` has no `@Size`. Over-length values → DB error → 500 | `@Size(max = 200)` / `@Size(max = 100)`, cap `description` |
+| ~~G-11~~ | ✅ Done | API | ~~`CreateReportRequest` has no `@Size`. Over-length values → DB error → 500~~ | **Fixed (24 Oct 2026):** `@Size` on the request DTO: item name 200, description 2000, city 100 (same as the DB columns). Over-length now gives 400 `VALIDATION_ERROR`. Validation is on the DTO, not the entity, because entity checks run too late (at save) |
 | G-12 | P2 | Security | `org.springframework.security: TRACE` in the base config | `INFO` by default, `DEBUG` in `application-local.yml` |
 | G-13 | P2 | Security | JWT issuer not validated on decode | `JwtValidators.createDefaultWithIssuer("milaavo")` |
 | G-14 | P2 | Data | Mobile number only trimmed. The same number in different formats becomes different accounts | Normalize to E.164 |
@@ -28,7 +28,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-19 | P2 | Code | `OtpServiceImpl` uses `jakarta.transaction.Transactional`, everything else uses Spring's | Use `org.springframework.transaction.annotation.Transactional` |
 | G-20 | P2 | Perf | `REQUIRES_NEW` in verify holds 2 connections per request | Size the pool for it, or restructure: commit the counter with a conditional update in the outer transaction and return a result instead of throwing |
 | G-21 | P2 | Ops | One scheduler thread shared by processing and recovery. No graceful shutdown | `spring.task.scheduling.pool.size: 2`, graceful shutdown |
-| G-22 | P2 | API | Catch-all handler likely turns Spring 404/405 into 500. `HandlerMethodValidationException` message always says "pagination". Superseded OTP reported as "already used". `MAX_ATTEMPTS` returned as 400 | Extend `ResponseEntityExceptionHandler` or map explicitly, use a generic message, add a `superseded` state |
+| ~~G-22~~ | ✅ Done | API | ~~1. Catch-all turns Spring 404/405/415 into 500~~ ✅ fixed 24 Oct 2026 (405 and 404 verified; 415 and `Allow` header not checked yet). ~~2. `HandlerMethodValidationException` message always says "pagination"~~ ✅ fixed 24 Oct 2026 (now returns `fieldErrors` per parameter). ~~3. Superseded OTP reported as "already used"~~ ✅ fixed 24 Oct 2026 (new `superseded_at` column, changeset 009). ~~4. `MAX_ATTEMPTS` returned as 400~~ ✅ decided 24 Oct 2026: keep 400 (429 means "retry later", but a locked OTP never unlocks), and give each OTP failure its own error code | All 4 parts done |
 | G-10 | P2 | Code | Dead code: `OtpSmsEvent`/`OtpSmsEventListener`, unused `smsSender`/`eventPublisher` in `OtpServiceImpl`, unused `findTop50…`, stale TODO | Delete |
 | G-23 | P2 | Ops | No correlation id, metrics, Actuator or readiness | [07](07-observability-operations.md) |
 | G-24 | P2 | Code | `UserAlreayActiveException` typo. `ResentVerificationOTP*` DTO names. Field injection in the report module | Rename to `UserAlreadyActiveException` / `ResendVerificationOtp*`, use constructor injection |
@@ -51,7 +51,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 1. ~~**G-06 report ownership.**~~ ✅ Done. A strong interview example of "authentication is not authorization".
 2. **G-02, G-05, G-03, G-04 outbox refactor**, as one change. It is the core distributed-systems story of this project.
 3. **G-01 OTP at rest**, together with the outbox refactor, since it touches the same table.
-4. **Error mapping:** ~~G-07~~ ✅ done; G-08, G-11, G-22 next. Quick wins, a few lines each.
+4. **Error mapping:** ~~G-07~~ ✅, ~~G-08~~ ✅, ~~G-11~~ ✅, ~~G-22~~ ✅ all done.
 5. **G-15 rate limiting**, then **G-23 observability**.
 6. **G-25 test session**, which also locks in everything above.
 7. The remaining P2 cleanup items.

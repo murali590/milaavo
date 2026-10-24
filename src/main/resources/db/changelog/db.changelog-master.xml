@@ -20,5 +20,7 @@
          relativeToChangelogFile="true"/>
     <include file="changes/008-add-lost-report-owner.xml"
          relativeToChangelogFile="true"/>
+    <include file="changes/009-add-otp-challenge-superseded-at.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

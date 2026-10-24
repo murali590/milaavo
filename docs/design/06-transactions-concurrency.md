@@ -62,7 +62,7 @@ In `SmsOutboxClaimService`, the rows returned by the native query are managed en
 
 | Problem | Where | Technique | Alternative |
 |---|---|---|---|
-| Duplicate registration | `register` | Unique constraint `uk_app_user_mobile_number`. `existsBy…` is only for a friendly error | Catch `DataIntegrityViolationException` → 409. **Missing today** (G-08): the race returns 500 |
+| Duplicate registration | `register` | Unique constraint `uk_app_user_mobile_number`. `existsBy…` is only for a friendly error | **Implemented (G-08):** `saveAndFlush` sends the INSERT immediately so the constraint error comes back inside the `try`. Only this constraint becomes 409. Note: plain `save()` delays the INSERT until a later flush, so the catch would never run |
 | Double OTP verification | `verify` | Pessimistic lock + `consumed_at` check | Conditional update: `UPDATE … SET consumed_at=now WHERE id=? AND consumed_at IS NULL`, then check the row count |
 | Resend rate-limit race | `resendVerificationOtp` | Lock the parent user row to serialize | Advisory lock, or a unique `(user_id, time_bucket)` |
 | Queue claiming | outbox claim | `FOR UPDATE SKIP LOCKED` | Broker with visibility timeouts (SQS), or Kafka partitions |

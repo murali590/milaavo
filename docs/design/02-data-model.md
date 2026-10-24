@@ -26,6 +26,7 @@ erDiagram
         timestamptz expires_at
         int failed_attempts
         timestamptz consumed_at
+        timestamptz superseded_at
         timestamptz created_at
     }
     otp_resend_attempt {
@@ -86,12 +87,13 @@ Every `lost_report` row belongs to one user through `owner_id` (added in changes
 | `otp_hash` | VARCHAR(255) | NOT NULL | Base64 HMAC-SHA256 of `userId:purpose:otp`. The raw OTP is never stored here |
 | `expires_at` | TIMESTAMPTZ | NOT NULL | Issue time + 5 minutes |
 | `failed_attempts` | INTEGER | NOT NULL, default 0 | Locks out at 5 |
-| `consumed_at` | TIMESTAMPTZ | nullable | Set on success **and** when a newer OTP supersedes this one |
+| `consumed_at` | TIMESTAMPTZ | nullable | Set only on successful verification |
+| `superseded_at` | TIMESTAMPTZ | nullable | Set when a newer OTP replaces this one (changeset 009). Before this, `consumed_at` was used for both meanings |
 | `created_at` | TIMESTAMPTZ | NOT NULL | |
 
 Index: `idx_otp_challenge_user_created (user_id, created_at)`.
 
-The lookup query is `WHERE id = ? AND user_id = ? AND purpose = ?`, which uses the primary key. The supersede query is `WHERE user_id = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?`, which uses the `user_id` prefix of the index.
+The lookup query is `WHERE id = ? AND user_id = ? AND purpose = ?`, which uses the primary key. The supersede query is `WHERE user_id = ? AND purpose = ? AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > ?`, which uses the `user_id` prefix of the index.
 
 ### `otp_resend_attempt` (changeset 004)
 
@@ -126,9 +128,9 @@ Index: `idx_sms_outbox_status_created_at (status, created_at)`.
 |---|---|---|---|
 | `id` | UUID | PK | |
 | `owner_id` | UUID | NOT NULL, FK `fk_lost_report_owner` → `app_user` | Set from the logged-in user on create. `updatable = false` in the entity, so it never changes |
-| `item_name` | VARCHAR(200) | NOT NULL | DTO has no `@Size` (Gap G-11) |
-| `description` | TEXT | NOT NULL | Unbounded |
-| `city` | VARCHAR(100) | NOT NULL | DTO has no `@Size` |
+| `item_name` | VARCHAR(200) | NOT NULL | DTO: `@Size(max = 200)` |
+| `description` | TEXT | NOT NULL | No DB limit. DTO: `@Size(max = 2000)` |
+| `city` | VARCHAR(100) | NOT NULL | DTO: `@Size(max = 100)` |
 | `status` | VARCHAR(30) | NOT NULL | Always `REPORTED` today. Plain string, not an enum |
 | `created_at` | TIMESTAMPTZ | NOT NULL | `@CreationTimestamp` |
 

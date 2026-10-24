@@ -49,6 +49,10 @@ public class OtpVerificationTransaction {
             return OtpVerificationResult.ALREADY_USED;
         }
 
+        if (challenge.getSupersededAt() != null) {
+            return OtpVerificationResult.SUPERSEDED;
+        }
+
         if (!Instant.now().isBefore(challenge.getExpiresAt())) {
             return OtpVerificationResult.EXPIRED;
         }

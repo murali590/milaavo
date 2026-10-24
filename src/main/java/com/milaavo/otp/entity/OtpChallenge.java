@@ -34,11 +34,7 @@ public class OtpChallenge {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "user_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_otp_challenge_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_otp_challenge_user"))
     private User user;
 
     @Enumerated(EnumType.STRING)
@@ -59,6 +55,9 @@ public class OtpChallenge {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "superseded_at")
+    private Instant supersededAt;
 
     @PrePersist
     void onCreate() {

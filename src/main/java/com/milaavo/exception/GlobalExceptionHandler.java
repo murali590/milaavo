@@ -2,7 +2,9 @@
 package com.milaavo.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -65,11 +67,23 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(HandlerMethodValidationException.class)
         public ResponseEntity<ApiErrorResponse> handleHandlerMethodValidationException(
                         HandlerMethodValidationException exception) {
+
+                Map<String, String> fieldErrors = new TreeMap<>();
+
+                exception.getParameterValidationResults().forEach(result -> {
+                        String name = result.getMethodParameter().getParameterName();
+                        String key = name != null ? name : "parameter";
+
+                        result.getResolvableErrors().stream()
+                                        .findFirst()
+                                        .ifPresent(error -> fieldErrors.putIfAbsent(key, error.getDefaultMessage()));
+                });
+
                 ApiErrorResponse response = new ApiErrorResponse(
                                 HttpStatus.BAD_REQUEST.value(),
                                 "VALIDATION_ERROR",
-                                "Invalid pagination parameters",
-                                null);
+                                "Request validation failed",
+                                fieldErrors);
 
                 return ResponseEntity.badRequest().body(response);
         }
@@ -142,7 +156,7 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.badRequest().body(
                                 new ApiErrorResponse(
                                                 400,
-                                                "INVALID_OTP",
+                                                ex.getErrorCode(),
                                                 ex.getMessage(),
                                                 Map.of()));
         }
@@ -157,23 +171,6 @@ public class GlobalExceptionHandler {
                                 null);
 
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        }
-
-        @ExceptionHandler(Exception.class)
-        public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
-                        Exception ex) {
-
-                log.error("Unexpected application exception", ex);
-
-                ApiErrorResponse response = new ApiErrorResponse(
-                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                                "INTERNAL_SERVER_ERROR",
-                                "An unexpected error occurred",
-                                null);
-
-                return ResponseEntity
-                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(response);
         }
 
         @ExceptionHandler(OtpResendRateLimitException.class)
@@ -201,5 +198,49 @@ public class GlobalExceptionHandler {
                                 null);
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
+                        Exception ex) {
+
+                if (ex instanceof ErrorResponse errorResponse) {
+                        return handleSpringMvcException(errorResponse);
+                }
+
+                log.error("Unexpected application exception", ex);
+
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                                "INTERNAL_SERVER_ERROR",
+                                "An unexpected error occurred",
+                                null);
+
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(response);
+        }
+
+        // Spring's own client errors (404, 405, 415, ...) already carry the right
+        // status.
+        private ResponseEntity<ApiErrorResponse> handleSpringMvcException(
+                        ErrorResponse errorResponse) {
+
+                HttpStatusCode statusCode = errorResponse.getStatusCode();
+                HttpStatus status = HttpStatus.resolve(statusCode.value());
+
+                String error = status != null ? status.name() : "REQUEST_ERROR";
+                String message = status != null ? status.getReasonPhrase() : "Request could not be processed";
+
+                ApiErrorResponse response = new ApiErrorResponse(
+                                statusCode.value(),
+                                error,
+                                message,
+                                null);
+
+                return ResponseEntity
+                                .status(statusCode)
+                                .headers(errorResponse.getHeaders())
+                                .body(response);
         }
 }

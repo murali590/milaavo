@@ -14,6 +14,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 
 import org.springframework.security.authentication.BadCredentialsException;
@@ -63,7 +65,17 @@ public class UserServiceImpl implements UserService {
                 user.setMobileVerified(false);
                 user.setStatus(UserStatus.PENDING_VERIFICATION);
 
-                User savedUser = userRepository.save(user);
+                User savedUser;
+
+                try {
+                        savedUser = userRepository.saveAndFlush(user);
+                } catch (DataIntegrityViolationException ex) {
+                        if (isMobileNumberConflict(ex)) {
+                                throw new DuplicateMobileNumberException(
+                                                "An account with this mobile number already exists");
+                        }
+                        throw ex;
+                }
 
                 UUID challengeId = otpService.issueOtp(
                                 savedUser.getId(),
@@ -187,6 +199,11 @@ public class UserServiceImpl implements UserService {
                 return ResentVerificationOTPResponse.builder()
                                 .challengeId(challengeId)
                                 .build();
+        }
+
+        private boolean isMobileNumberConflict(DataIntegrityViolationException ex) {
+                return ex.getCause() instanceof ConstraintViolationException violation
+                                && "uk_app_user_mobile_number".equalsIgnoreCase(violation.getConstraintName());
         }
 
 }

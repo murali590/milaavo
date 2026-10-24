@@ -15,14 +15,18 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 }
 ```
 
-`fieldErrors` is `null` (or `{}` for `INVALID_OTP`) when no fields are involved. 401 and 403 raised by the security filter chain are written by `ApiSecurityErrorHandler` in the same shape.
+`fieldErrors` is `null` (or `{}` for OTP errors) when no fields are involved. 401 and 403 raised by the security filter chain are written by `ApiSecurityErrorHandler` in the same shape.
 
 | `error` | HTTP | Raised when |
 |---|---|---|
-| `VALIDATION_ERROR` | 400 | `@Valid` body fails, or a `@Min`/`@Max` query parameter fails (message is always "Invalid pagination parameters", Gap G-22) |
+| `VALIDATION_ERROR` | 400 | `@Valid` body fails, or a `@Min`/`@Max` query parameter fails. `fieldErrors` names each failed field or parameter, for example `{"page": "Page number must be at least 0"}` |
 | `INVALID_REQUEST_BODY` | 400 | Missing or malformed JSON, wrong JSON types |
 | `INVALID_PARAMETER` | 400 | Path or query parameter cannot be converted, for example a non-UUID `{id}` |
-| `INVALID_OTP` | 400 | OTP wrong, expired, already used, superseded, or locked |
+| `INVALID_OTP` | 400 | Wrong OTP, or the challenge doesn't match (same code for both, so challenge ids can't be probed) |
+| `OTP_EXPIRED` | 400 | OTP older than 5 minutes. Client should offer "Resend" |
+| `OTP_ALREADY_USED` | 400 | OTP was already verified |
+| `SUPERSEDED` | 400 | A newer OTP was issued. Client should ask for the latest OTP |
+| `MAX_ATTEMPTS_EXCEEDED` | 400 | 5 wrong tries. The challenge is locked for good, even for the correct OTP. Client should offer "Resend" |
 | `INVALID_VERIFICATION_REQUEST` | 400 | Verify or resend with a `userId` that doesn't exist |
 | `UNAUTHORIZED` | 401 | No token, or an invalid or expired token |
 | `INVALID_CREDENTIALS` | 401 | Login with an unknown mobile number or a wrong password (same message for both) |
@@ -33,7 +37,7 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 | `TOO_MANY_REQUESTS` | 429 | Resend cooldown or window limit hit |
 | `INTERNAL_SERVER_ERROR` | 500 | Anything else. Logged with a stack trace, never returned to the client |
 
-> **Gap G-22:** some client errors end up as 500 because the catch-all `Exception` handler catches them. Examples: a register race on the unique constraint (`DataIntegrityViolationException`, G-08), and an over-length report field. Spring's own 404 (no route) and 405 (wrong method) exceptions are probably caught by the catch-all too. Verify this and map them explicitly.
+**Spring's own client errors** (G-22 part 1, fixed): a wrong URL gives 404 `NOT_FOUND`, a wrong method gives 405 `METHOD_NOT_ALLOWED` (with an `Allow` header), and a wrong Content-Type gives 415 `UNSUPPORTED_MEDIA_TYPE`. The catch-all handler checks for Spring's `ErrorResponse` interface and reuses the status it carries. Only real unexpected errors become 500.
 
 ## Auth endpoints (public)
 
@@ -67,7 +71,7 @@ Errors: 400, 409 `MOBILE_NUMBER_ALREADY_REGISTERED`.
 
 `otp` must match `\d{6}`. On success the user becomes `ACTIVE` with `mobileVerified = true`.
 
-Errors: 400 `INVALID_OTP` (the message says which: invalid, expired, already used, max attempts), 400 `INVALID_VERIFICATION_REQUEST` for an unknown `userId`, 409 `USER_ALREADY_ACTIVE`.
+Errors: 400 with one of `INVALID_OTP`, `OTP_EXPIRED`, `OTP_ALREADY_USED`, `SUPERSEDED`, `MAX_ATTEMPTS_EXCEEDED` (clients should branch on this code, never on the message text), 400 `INVALID_VERIFICATION_REQUEST` for an unknown `userId`, 409 `USER_ALREADY_ACTIVE`.
 
 ### `POST /api/auth/verify/resend-otp` → 200
 
@@ -113,7 +117,7 @@ Report body (`CreateReportRequest`, used for both create and update):
 { "itemName": "Black wallet", "description": "Lost near MG Road metro", "city": "Bengaluru" }
 ```
 
-All three fields are `@NotBlank`. There are no length limits yet (G-11).
+All three fields are `@NotBlank`, with max lengths: `itemName` 200, `description` 2000, `city` 100. Longer values return 400 `VALIDATION_ERROR` with `fieldErrors`.
 
 Report representation (`CreateReportResponse`):
 

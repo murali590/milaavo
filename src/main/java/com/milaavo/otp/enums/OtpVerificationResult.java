@@ -6,5 +6,6 @@ public enum OtpVerificationResult {
     EXPIRED,
     ALREADY_USED,
     MAX_ATTEMPTS_EXCEEDED,
-    CHALLENGE_NOT_FOUND
+    CHALLENGE_NOT_FOUND,
+    SUPERSEDED
 }

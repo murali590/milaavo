@@ -18,9 +18,9 @@ A challenge has no `status` column. Its state is derived from its columns:
 
 | Derived state | Condition |
 |---|---|
-| Pending | `consumed_at IS NULL AND now < expires_at AND failed_attempts < 5` |
+| Pending | `consumed_at IS NULL AND superseded_at IS NULL AND now < expires_at AND failed_attempts < 5` |
 | Verified | `consumed_at` set by a successful verification |
-| Superseded | `consumed_at` set by `invalidateActiveChallenges` when a new OTP is issued |
+| Superseded | `superseded_at` set by `invalidateActiveChallenges` when a new OTP is issued |
 | Expired | `now ≥ expires_at` |
 | Locked | `failed_attempts ≥ 5` |
 
@@ -34,12 +34,12 @@ stateDiagram-v2
     Pending --> Locked : 5th wrong attempt
 ```
 
-Verified and Superseded look the same in the database, so a superseded OTP is reported as "OTP has already been used" (G-22). Adding a `status` or `superseded_at` column would make the two distinguishable for both support and metrics.
+Verified and Superseded use **separate columns** (G-22 part 3, fixed). Earlier both set `consumed_at`, so an old OTP was wrongly reported as "already used". Now a superseded OTP returns: "This OTP is no longer valid. Please use the latest OTP sent to your mobile". It is checked before expiry and before the hash, so it doesn't count as a failed attempt.
 
 ### Issue (`OtpServiceImpl.issueOtp`)
 
 1. Load the user.
-2. Supersede open challenges for the same user and purpose (bulk update `consumed_at = now`).
+2. Supersede open challenges for the same user and purpose (bulk update `superseded_at = now`).
 3. Generate a 6-digit code with `SecureRandom.nextInt(1_000_000)`, zero-padded.
 4. Store `HMAC-SHA256(key, "userId:purpose:otp")`, Base64-encoded.
 5. Set `expires_at = now + 5 min`.
@@ -50,7 +50,7 @@ Verified and Superseded look the same in the database, so a superseded OTP is re
 Runs in `REQUIRES_NEW`, separate from the caller's transaction:
 
 1. `SELECT … FOR UPDATE` on the challenge (`id`, `user_id` and `purpose` must all match). This serializes concurrent verifications of the same challenge.
-2. Not found → `CHALLENGE_NOT_FOUND`. Consumed → `ALREADY_USED`. Expired → `EXPIRED`. `failed_attempts ≥ 5` → `MAX_ATTEMPTS_EXCEEDED`.
+2. Not found → `CHALLENGE_NOT_FOUND`. Consumed → `ALREADY_USED`. Superseded → `SUPERSEDED`. Expired → `EXPIRED`. `failed_attempts ≥ 5` → `MAX_ATTEMPTS_EXCEEDED`.
 3. Hash mismatch → `failed_attempts + 1`, commit, `INVALID`.
 4. Match → `consumed_at = now`, commit, `VERIFIED`.
 
