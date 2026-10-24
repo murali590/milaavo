@@ -1,5 +1,5 @@
 
-package com.milaavo.notification.sms;
+package com.milaavo.notification.sms.service;
 
 public interface SmsSender {
 

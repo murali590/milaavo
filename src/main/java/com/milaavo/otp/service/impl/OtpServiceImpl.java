@@ -3,13 +3,17 @@ package com.milaavo.otp.service.impl;
 
 import com.milaavo.auth.entity.User;
 import com.milaavo.auth.repository.UserRepository;
-import com.milaavo.notification.sms.SmsSender;
+import com.milaavo.notification.sms.event.OtpSmsEvent;
+import com.milaavo.notification.sms.service.SmsOutboxService;
+import com.milaavo.notification.sms.service.SmsSender;
 import com.milaavo.otp.entity.OtpChallenge;
 import com.milaavo.otp.enums.OtpPurpose;
 import com.milaavo.otp.enums.OtpVerificationResult;
 import com.milaavo.otp.exception.InvalidOtpException;
 import com.milaavo.otp.repository.OtpChallengeRepository;
 import jakarta.transaction.Transactional;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.milaavo.otp.service.OtpService;
 import com.milaavo.otp.service.OtpHasher;
@@ -21,12 +25,12 @@ import java.util.UUID;
 @Service
 public class OtpServiceImpl implements OtpService {
 
-    private static final int OTP_LENGTH = 6;
-    private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int OTP_VALIDITY_MINUTES = 5;
 
     private final OtpVerificationTransaction otpVerificationTransaction;
     private final OtpHasher otpHasher;
+    private final ApplicationEventPublisher eventPublisher;
+    private final SmsOutboxService smsOutboxService;
 
     private final OtpChallengeRepository otpRepository;
     private final UserRepository userRepository;
@@ -38,12 +42,16 @@ public class OtpServiceImpl implements OtpService {
             OtpChallengeRepository otpRepository,
             UserRepository userRepository,
             SmsSender smsSender,
-            OtpHasher otpHasher) {
+            OtpHasher otpHasher,
+            ApplicationEventPublisher eventPublisher,
+            SmsOutboxService smsOutboxService) {
         this.otpVerificationTransaction = otpVerificationTransaction;
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
         this.smsSender = smsSender;
         this.otpHasher = otpHasher;
+        this.eventPublisher = eventPublisher;
+        this.smsOutboxService = smsOutboxService;
     }
 
     @Override
@@ -55,6 +63,13 @@ public class OtpServiceImpl implements OtpService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "User not found"));
+
+        Instant now = Instant.now();
+
+        otpRepository.invalidateActiveChallenges(
+                userId,
+                purpose,
+                now);
 
         String otp = String.format(
                 "%06d",
@@ -69,11 +84,9 @@ public class OtpServiceImpl implements OtpService {
 
         OtpChallenge savedChallenge = otpRepository.save(challenge);
 
-        // Send only after the database transaction commits.
-        smsSender.send(
-                mobileNumber,
-                "Your Milaavo verification code is " + otp
-                        + ". It expires in 5 minutes.");
+        // TODO: Move SMS delivery to an after-commit event or transactional outbox.
+        smsOutboxService.enqueue(mobileNumber, "Your Milaavo verification code is " + otp
+                + ". It expires in 5 minutes.");
 
         return savedChallenge.getId();
 

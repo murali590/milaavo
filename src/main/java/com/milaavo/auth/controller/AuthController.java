@@ -4,12 +4,16 @@ import com.milaavo.auth.dto.LoginRequest;
 import com.milaavo.auth.dto.LoginResponse;
 import com.milaavo.auth.dto.RegisterRequest;
 import com.milaavo.auth.dto.RegisterResponse;
+import com.milaavo.auth.dto.VerifyMobileOtpRequest;
 import com.milaavo.auth.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.milaavo.auth.dto.ResentVerificationOTPRequest;
+import com.milaavo.auth.dto.ResentVerificationOTPResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -34,6 +38,22 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
 
         LoginResponse response = userService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-mobile")
+    public ResponseEntity<Void> verifyMobile(
+            @Valid @RequestBody VerifyMobileOtpRequest request) {
+
+        userService.verifyMobileOtp(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/verify/resend-otp")
+    public ResponseEntity<ResentVerificationOTPResponse> resentVerificationOtp(
+            @Valid @RequestBody ResentVerificationOTPRequest request) {
+
+        ResentVerificationOTPResponse response = userService.resendVerificationOtp(request);
         return ResponseEntity.ok(response);
     }
 }

@@ -8,6 +8,7 @@ import com.milaavo.otp.repository.OtpChallengeRepository;
 import com.milaavo.otp.service.OtpHasher;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -29,7 +30,7 @@ public class OtpVerificationTransaction {
         this.otpHasher = otpHasher;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public OtpVerificationResult verify(
             UUID userId,
             UUID challengeId,
@@ -59,10 +60,12 @@ public class OtpVerificationTransaction {
         if (otp == null || !otp.matches("\\d{6}")
                 || !otpHasher.matches(challenge, otp)) {
             incrementFailedAttempts(challenge);
+            otpRepository.save(challenge);
             return OtpVerificationResult.INVALID;
         }
 
         challenge.setConsumedAt(Instant.now());
+        otpRepository.save(challenge);
         return OtpVerificationResult.VERIFIED;
     }
 

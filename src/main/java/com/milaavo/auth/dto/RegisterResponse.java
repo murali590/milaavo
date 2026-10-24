@@ -22,4 +22,5 @@ public class RegisterResponse {
     private boolean mobileVerified;
     private UserStatus status;
     private Instant createdAt;
+    private UUID challengeId;
 }

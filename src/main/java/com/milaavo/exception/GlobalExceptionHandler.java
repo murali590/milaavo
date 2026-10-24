@@ -9,15 +9,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import com.milaavo.common.dto.ApiErrorResponse;
+import com.milaavo.otp.exception.InvalidOtpException;
+import com.milaavo.otp.exception.OtpResendRateLimitException;
+
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import com.milaavo.auth.exception.UserAlreayActiveException;
 
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+        private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ApiErrorResponse> handleValidationException(
@@ -105,9 +114,9 @@ public class GlobalExceptionHandler {
                         AccessDeniedException ex) {
 
                 ApiErrorResponse response = new ApiErrorResponse(
-                                403,
-                                "ACCOUNT_NOT_VERIFIED",
-                                "Your account is not active or your mobile number is not verified",
+                                HttpStatus.FORBIDDEN.value(),
+                                "FORBIDDEN",
+                                "You do not have permission to perform this action",
                                 null);
 
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
@@ -126,4 +135,58 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
+        @ExceptionHandler(InvalidOtpException.class)
+        public ResponseEntity<ApiErrorResponse> handleInvalidOtp(
+                        InvalidOtpException ex) {
+                return ResponseEntity.badRequest().body(
+                                new ApiErrorResponse(
+                                                400,
+                                                "INVALID_OTP",
+                                                ex.getMessage(),
+                                                Map.of()));
+        }
+
+        @ExceptionHandler(UserAlreayActiveException.class)
+        public ResponseEntity<ApiErrorResponse> handleUserAlreayActiveException(
+                        UserAlreayActiveException ex) {
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.CONFLICT.value(),
+                                "USER_ALREADY_ACTIVE",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        }
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
+                        Exception ex) {
+
+                log.error("Unexpected application exception", ex);
+
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                                "INTERNAL_SERVER_ERROR",
+                                "An unexpected error occurred",
+                                null);
+
+                return ResponseEntity
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(response);
+        }
+
+        @ExceptionHandler(OtpResendRateLimitException.class)
+        public ResponseEntity<ApiErrorResponse> handleOtpResendRateLimit(
+                        OtpResendRateLimitException ex) {
+
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.TOO_MANY_REQUESTS.value(),
+                                "TOO_MANY_REQUESTS",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity
+                                .status(HttpStatus.TOO_MANY_REQUESTS)
+                                .body(response);
+        }
 }

@@ -1,0 +1,31 @@
+package com.milaavo.notification.sms.service;
+
+import com.milaavo.notification.sms.entity.SmsOutbox;
+import com.milaavo.notification.sms.enums.SmsOutboxStatus;
+import com.milaavo.notification.sms.repository.SmsOutboxRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+
+@Service
+@RequiredArgsConstructor
+public class SmsOutboxService {
+
+    private final SmsOutboxRepository smsOutboxRepository;
+
+    @Transactional
+    public void enqueue(String mobileNumber, String message) {
+        SmsOutbox smsOutbox = SmsOutbox.builder()
+        .mobileNumber(mobileNumber)
+                .message(message)
+                .createdAt(Instant.now())
+                .nextAttemptAt(Instant.now())
+                .status(SmsOutboxStatus.PENDING)
+                .attemptCount(0)
+                .build();
+
+        smsOutboxRepository.save(smsOutbox);
+    }
+}

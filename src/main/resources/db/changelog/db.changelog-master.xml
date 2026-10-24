@@ -12,5 +12,11 @@
          relativeToChangelogFile="true"/>
     <include file="changes/003-create-otp-challenge-table.xml"
          relativeToChangelogFile="true"/>
-
+    <include file="changes/004-create-otp-resend-attempt.xml"
+         relativeToChangelogFile="true"/>
+    <include file="changes/006-create-sms-outbox.xml"
+         relativeToChangelogFile="true"/>
+    <include file="changes/007-add-sms-outbox-processing-started-at.xml"
+         relativeToChangelogFile="true"/>
+         
 </databaseChangeLog>

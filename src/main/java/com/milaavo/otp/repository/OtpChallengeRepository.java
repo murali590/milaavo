@@ -12,35 +12,39 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import java.util.UUID;
 
 public interface OtpChallengeRepository
-                extends JpaRepository<OtpChallenge, UUID> {
+    extends JpaRepository<OtpChallenge, UUID> {
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("""
-                        SELECT challenge
-                        FROM OtpChallenge challenge
-                        WHERE challenge.id = :challengeId
-                          AND challenge.user.id = :userId
-                          AND challenge.purpose = :purpose
-                        """)
-        Optional<OtpChallenge> findForVerification(
-                        @Param("challengeId") UUID challengeId,
-                        @Param("userId") UUID userId,
-                        @Param("purpose") OtpPurpose purpose);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      SELECT challenge
+      FROM OtpChallenge challenge
+      WHERE challenge.id = :challengeId
+        AND challenge.user.id = :userId
+        AND challenge.purpose = :purpose
+      """)
+  Optional<OtpChallenge> findForVerification(
+      @Param("challengeId") UUID challengeId,
+      @Param("userId") UUID userId,
+      @Param("purpose") OtpPurpose purpose);
 
-        @Modifying
-        @Query("""
-                        UPDATE OtpChallenge challenge
-                        SET challenge.failedAttempts = challenge.failedAttempts + 1
-                        WHERE challenge.id = :challengeId
-                          AND challenge.consumedAt IS NULL
-                          AND challenge.failedAttempts < :maxAttempts
-                        """)
-        int incrementFailedAttempts(
-                        @Param("challengeId") UUID challengeId,
-                        @Param("maxAttempts") int maxAttempts);
+  @Modifying
+  @Query("""
+      UPDATE OtpChallenge challenge
+      SET challenge.consumedAt = :now
+      WHERE challenge.user.id = :userId
+        AND challenge.purpose = :purpose
+        AND challenge.consumedAt IS NULL
+        AND challenge.expiresAt > :now
+      """)
+  int invalidateActiveChallenges(
+      @Param("userId") UUID userId,
+      @Param("purpose") OtpPurpose purpose,
+      @Param("now") Instant now);
+
 }
