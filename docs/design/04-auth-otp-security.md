@@ -118,8 +118,33 @@ Gaps and proposals:
 
 ## Authorization
 
-- **G-06: broken object-level authorization on reports.** No owner, no checks. This is OWASP API Security #1. Fix: add `owner_id` (P-1), set it from `jwt.sub` on create, and filter by owner on update and delete. Return **404, not 403**, for someone else's report, so the API does not confirm that the id exists.
-- Pass the authenticated user id into services explicitly (for example `@AuthenticationPrincipal Jwt jwt` → `UUID.fromString(jwt.getSubject())`). Never take it from the request body.
+**Report ownership (G-06, fixed). Implemented.**
+
+Before this fix, any logged-in user could read, edit or delete any report. This is called BOLA (Broken Object Level Authorization), and it is No. 1 in the OWASP API Security list. Now:
+
+- Every report has an `owner_id` (changeset 008), taken from the logged-in user when the report is created.
+- All report queries filter by owner: `findByIdAndOwnerId` for get, update and delete, `findByOwnerId` for the list.
+- Someone else's report returns **404, not 403**. 403 would tell an attacker "this id exists". 404 tells them nothing.
+- The owner is **never** taken from the request body. Only from the token.
+
+### How the logged-in user reaches the controller (`AuthUser` context)
+
+Think of it like a visitor badge in an office:
+
+1. **Gate check:** Spring Security checks the JWT (signature, algorithm, expiry).
+2. **Badge:** `AuthUserJwtConverter` reads the token's `sub` claim and writes `AuthUser(userId)` on the "badge" (`AuthUserAuthenticationToken`). If `sub` is missing or not a UUID, it throws `InvalidBearerTokenException`, so the user gets **401**, not 500.
+3. **Reading the badge:** in the controller, `@CurrentUser AuthUser currentUser` gives the logged-in user. `@CurrentUser` is our short name for Spring's `@AuthenticationPrincipal`.
+
+| Class (`com.milaavo.common.security`) | Job |
+|---|---|
+| `AuthUser` | Our own "logged-in user" record. Only `userId` for now; roles later |
+| `AuthUserAuthenticationToken` | Holds `AuthUser` as the principal and the `Jwt` as credentials |
+| `AuthUserJwtConverter` | Turns a verified `Jwt` into the token above. The only class that knows the user id is in `sub` |
+| `CurrentUser` | Annotation for controller parameters |
+
+It is wired in `SecurityConfig` with `.jwt(jwt -> jwt.jwtAuthenticationConverter(authUserJwtConverter))`.
+
+**Rule:** controllers read the user, and services receive it as a parameter (`AuthUser currentUser`). Services do not read `SecurityContextHolder`, because it is stored per thread and is empty in `@Async` code, scheduled jobs and other threads.
 
 ## Other security review items
 

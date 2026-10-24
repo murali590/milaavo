@@ -104,7 +104,7 @@ Errors: 401 `INVALID_CREDENTIALS`, 403 `FORBIDDEN` (not active or not verified).
 
 Send `Authorization: Bearer <accessToken>`. Requests without a token, or with an expired or invalid one, get 401 `UNAUTHORIZED`.
 
-> **Gap G-06:** reports have no owner. Any logged-in user can read, update and delete **any** report.
+**Ownership:** every report belongs to the user who created it. A user can only see, edit and delete their own reports. Someone else's report returns **404 `REPORT_NOT_FOUND`**, the same as a report that doesn't exist (see [04](04-auth-otp-security.md#authorization)).
 
 Report body (`CreateReportRequest`, used for both create and update):
 
@@ -125,10 +125,10 @@ Report representation (`CreateReportResponse`):
 | Method | Path | Success | Notes |
 |---|---|---|---|
 | POST | `/api/reports` | 201 + report | `status` is always `REPORTED` |
-| GET | `/api/reports?page=0&size=10` | 200 + page | `page ≥ 0`, `1 ≤ size ≤ 100`. Sorted by `createdAt DESC`. The client cannot choose the sort (no SQL-injection surface) |
-| GET | `/api/reports/{id}` | 200 + report | 404 `REPORT_NOT_FOUND`, 400 `INVALID_PARAMETER` for a non-UUID |
-| PUT | `/api/reports/{id}` | 200 + report | Full replacement of the three fields |
-| DELETE | `/api/reports/{id}` | 204 | Hard delete. 404 if missing |
+| GET | `/api/reports?page=0&size=10` | 200 + page | **Only my reports.** `page ≥ 0`, `1 ≤ size ≤ 100`. Sorted by `createdAt DESC`. The client cannot choose the sort (no SQL-injection surface) |
+| GET | `/api/reports/{id}` | 200 + report | 404 `REPORT_NOT_FOUND` if missing or not mine. 400 `INVALID_PARAMETER` for a non-UUID |
+| PUT | `/api/reports/{id}` | 200 + report | Full replacement of the three fields. 404 if missing or not mine |
+| DELETE | `/api/reports/{id}` | 204 | Hard delete. 404 if missing or not mine |
 
 Page shape (`PagedResponse`):
 

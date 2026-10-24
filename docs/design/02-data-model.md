@@ -8,6 +8,7 @@ Source of truth: Liquibase changesets in `src/main/resources/db/changelog/change
 erDiagram
     app_user ||--o{ otp_challenge : "has"
     app_user ||--o{ otp_resend_attempt : "has"
+    app_user ||--o{ lost_report : "owns"
     app_user {
         uuid id PK
         varchar name
@@ -46,6 +47,7 @@ erDiagram
     }
     lost_report {
         uuid id PK
+        uuid owner_id FK
         varchar item_name
         text description
         varchar city
@@ -56,7 +58,7 @@ erDiagram
 
 `sms_outbox` deliberately has no foreign key to `app_user`. It is a delivery queue, and a message must still be sendable (or auditable) after unrelated user changes.
 
-`lost_report` has no `owner_id`. That is Gap G-06.
+Every `lost_report` row belongs to one user through `owner_id` (added in changeset 008, G-06 fix).
 
 ## Tables
 
@@ -118,18 +120,21 @@ Index: `idx_otp_resend_attempt_user_requested (user_id, requested_at)`. It serve
 
 Index: `idx_sms_outbox_status_created_at (status, created_at)`.
 
-### `lost_report` (changeset 001)
+### `lost_report` (changesets 001, 008)
 
 | Column | Type | Constraint | Notes |
 |---|---|---|---|
 | `id` | UUID | PK | |
+| `owner_id` | UUID | NOT NULL, FK `fk_lost_report_owner` → `app_user` | Set from the logged-in user on create. `updatable = false` in the entity, so it never changes |
 | `item_name` | VARCHAR(200) | NOT NULL | DTO has no `@Size` (Gap G-11) |
 | `description` | TEXT | NOT NULL | Unbounded |
 | `city` | VARCHAR(100) | NOT NULL | DTO has no `@Size` |
 | `status` | VARCHAR(30) | NOT NULL | Always `REPORTED` today. Plain string, not an enum |
 | `created_at` | TIMESTAMPTZ | NOT NULL | `@CreationTimestamp` |
 
-No index besides the primary key. Listing sorts by `created_at DESC`, which is a full sort today. That is fine at small sizes (see the proposed index below).
+Index: `idx_lost_report_owner_created (owner_id, created_at)`. It serves the "my reports, newest first" list (`WHERE owner_id = ? ORDER BY created_at DESC`). PostgreSQL can read a B-tree index backwards, so the `DESC` sort doesn't need a separate index.
+
+> Changeset 008 deletes the existing `lost_report` rows before adding the `NOT NULL` column. That's fine for local test data only. With real data, use **expand → migrate → contract**: add the column as nullable, fill it in, then make it `NOT NULL` in a later release.
 
 > Changeset numbering skips `005`. That is harmless, because Liquibase tracks changesets by id/author/file, not by number. Do not reuse 005 later, to avoid confusion.
 
@@ -139,7 +144,7 @@ Each one is a new changeset. Never edit an applied changeset, because Liquibase 
 
 | # | Change | Why |
 |---|---|---|
-| P-1 | `lost_report.owner_id UUID NOT NULL REFERENCES app_user(id)` plus index `(owner_id, created_at DESC)` | Ownership checks (G-06) and "my reports" listing. Backfill or truncate dev data first |
+| ~~P-1~~ | ~~`lost_report.owner_id` + index~~ | ✅ Done in changeset 008 (G-06) |
 | P-2 | `lost_report.updated_at TIMESTAMPTZ` and `version BIGINT` (`@Version`) | Audit trail and optimistic locking on concurrent PUTs |
 | P-3 | Partial index `CREATE INDEX idx_sms_outbox_due ON sms_outbox (next_attempt_at) WHERE status = 'PENDING'` | Matches the claim query. The existing `(status, created_at)` index cannot filter on `next_attempt_at`. Verify with `EXPLAIN ANALYZE` on realistic data first |
 | P-4 | `sms_outbox.claim_token UUID` (or `version BIGINT`) | Prevents a stale worker from overwriting a reclaimed row (G-03) |

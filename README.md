@@ -116,7 +116,7 @@ Full contract, status codes and error codes: [docs/design/03-api.md](docs/design
 | POST | `/api/auth/verify/resend-otp` | public | Issue a new OTP (cooldown and window limits) |
 | POST | `/api/auth/login` | public | Exchange mobile and password for a JWT |
 | POST | `/api/reports` | Bearer | Create a lost-item report |
-| GET | `/api/reports?page=&size=` | Bearer | Paged list, newest first |
+| GET | `/api/reports?page=&size=` | Bearer | My reports, paged, newest first |
 | GET | `/api/reports/{id}` | Bearer | Report detail |
 | PUT | `/api/reports/{id}` | Bearer | Replace report fields |
 | DELETE | `/api/reports/{id}` | Bearer | Delete report |
@@ -146,10 +146,11 @@ src/main/java/com/milaavo
 ├── notification/sms/     outbox entity, enqueue, claim, process, recover, SmsSender
 ├── report/               lost-item report CRUD and pagination
 ├── common/dto/           ApiErrorResponse
+├── common/security/      AuthUser, @CurrentUser, JWT → AuthUser converter
 ├── config/               security filter chain, JWT, password encoder, 401/403 JSON
 ├── exception/            GlobalExceptionHandler and shared exceptions
 └── health/               /api/health
-src/main/resources/db/changelog   Liquibase master + changesets 001–007
+src/main/resources/db/changelog   Liquibase master + changesets 001–008
 ```
 
 ## Documentation

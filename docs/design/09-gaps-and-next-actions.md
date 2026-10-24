@@ -9,7 +9,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | Id | Pri | Area | Gap | Fix |
 |---|---|---|---|---|
 | G-01 | P0 | OTP / SMS | Plaintext OTP stored in `sms_outbox.message` and never removed | Encrypt or template the message, null it after completion, add retention ([05](05-sms-outbox.md#changes-in-order) item 10) |
-| G-06 | P0 | Reports | No `owner_id`. Any authenticated user can read, update or delete any report (BOLA) | P-1 schema change, set owner from `jwt.sub`, scope queries, return 404 for other users' reports |
+| ~~G-06~~ | ✅ Done | Reports | ~~No `owner_id`. Any authenticated user can read, update or delete any report (BOLA)~~ | **Fixed (24 Oct 2026):** changeset 008 adds `owner_id`. `AuthUser` + `@CurrentUser` give the logged-in user to controllers. All report queries filter by owner, and other users' reports return 404 |
 | G-02 | P1 | Outbox | `smsSender.send()` runs inside `@Transactional` `process()` | Non-transactional orchestrator + short state transactions |
 | G-03 | P1 | Outbox | No claim token or version. A stale worker overwrites a reclaimed row | P-4, conditional `UPDATE … WHERE claim_token = ?` |
 | G-04 | P1 | Outbox | Recovery cutoff hard-coded at 2 min, unrelated to any provider timeout | Configurable lease, much larger than the provider timeout |
@@ -48,7 +48,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 
 ## Suggested order of work
 
-1. **G-06 report ownership.** Small, high impact, and a strong interview example of "authentication is not authorization".
+1. ~~**G-06 report ownership.**~~ ✅ Done. A strong interview example of "authentication is not authorization".
 2. **G-02, G-05, G-03, G-04 outbox refactor**, as one change. It is the core distributed-systems story of this project.
 3. **G-01 OTP at rest**, together with the outbox refactor, since it touches the same table.
 4. **G-07, G-08, G-11, G-22 error mapping.** Quick wins, a few lines each.

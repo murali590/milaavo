@@ -97,7 +97,7 @@ Learning (tracked in the [evidence log](../sde3/evidence-log.md)):
 | Phase | Outcome | Status |
 |---|---|---|
 | **0. Foundation** | Auth + OTP, lost reports, SMS outbox, docs | Mostly done. Gaps in [09](../design/09-gaps-and-next-actions.md) |
-| **1. Two-sided reports** | Lost *and* found reports with owners, photos, location, dates. Fix G-06 | Next |
+| **1. Two-sided reports** | Lost *and* found reports with owners, photos, location, dates. Ownership (G-06) ✅ done | Next |
 | **2. Rule-based matching + claim** | Candidate matching without AI, in-app messaging, claim with hidden-detail verification, handover | Planned |
 | **3. Web UI + deployment** | Responsive React app. Containerized, CI/CD, IaC, HTTPS, monitoring on free-tier cloud | Planned |
 | **4. AI assistance** | Attributes from photos, image and text embeddings, vector similarity in matching | Planned |

@@ -16,7 +16,7 @@ This page lists every transaction boundary in the code, what it protects, and th
 | `SmsOutboxProcessor.process` | `@Transactional` | Outcome write | **Wraps the network call** (G-02) |
 | `SmsOutboxRecoveryService.recoverStaleMessages` | `@Transactional` | Bulk reset | A single `UPDATE` |
 | `ReportServiceImpl.create/update/delete` | `@Transactional` | Single-entity writes | |
-| `ReportServiceImpl.getAll/getById` | none | | Runs with auto-commit per query. Add `@Transactional(readOnly = true)` for consistency and to keep the persistence context open for lazy loading |
+| `ReportServiceImpl.getAll/getById` | `@Transactional(readOnly = true)` | Consistent read | Added with G-06. `readOnly` lets Hibernate skip dirty checking |
 
 ## Spring concepts this code depends on
 

@@ -44,10 +44,10 @@ flowchart TB
 | `auth` | Registration, login, mobile verification, resend OTP, JWT issuing | `AuthController`, `UserServiceImpl`, `JwtService`, `User` | Implemented |
 | `otp` | Issue and verify OTP challenges for any purpose, HMAC hashing, resend limits | `OtpServiceImpl`, `OtpVerificationTransaction`, `OtpHasher`, `OtpChallenge`, `OtpResendAttempt` | Implemented |
 | `notification.sms` | Outbox enqueue, claim, send, retry, recover; provider abstraction | `SmsOutboxService`, `SmsOutboxWorker`, `SmsOutboxClaimService`, `SmsOutboxProcessor`, `SmsOutboxRecoveryService`, `SmsSender` | Implemented, with gaps (see [05](05-sms-outbox.md)) |
-| `report` | Lost-item report CRUD and pagination | `ReportController`, `ReportServiceImpl`, `LostReport` | Implemented, no ownership (Gap G-06) |
+| `report` | Lost-item report CRUD and pagination, scoped to the owner | `ReportController`, `ReportServiceImpl`, `LostReport` | Implemented |
 | `config` | Security filter chain, JWT encoder/decoder, password encoder, JSON 401/403 | `SecurityConfig`, `JwtConfig`, `PasswordConfig`, `ApiSecurityErrorHandler` | Implemented |
 | `exception` | Map exceptions to a stable error body | `GlobalExceptionHandler` | Implemented |
-| `common` | Shared response types | `ApiErrorResponse` | Implemented |
+| `common` | Shared response types, logged-in user context | `ApiErrorResponse`, `AuthUser`, `@CurrentUser`, `AuthUserJwtConverter` | Implemented |
 | `health` | Liveness endpoint | `HealthController` (`/api/health`) | Implemented. No readiness check (Proposed) |
 
 `otp` is intentionally separate from `auth`: `OtpPurpose` already has `PASSWORD_RESET` and `CHANGE_MOBILE`, so the same issue/verify flow can serve future features without copying it.

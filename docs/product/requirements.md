@@ -86,9 +86,9 @@ The current `lost_report` table becomes a general `item_report` (see §5).
 
 | Id | Requirement | Pri | Status |
 |---|---|---|---|
-| FR-ITEM-1 | Create a LOST report: category, title, description, area, date or date range, optional photos | M | Partly (lost only, no owner, category, location or photos) |
+| FR-ITEM-1 | Create a LOST report: category, title, description, area, date or date range, optional photos | M | Partly (lost only, with owner; no category, location or photos yet) |
 | FR-ITEM-2 | Create a FOUND report: as above, plus hidden detail, verification question and current custody | M | Proposed |
-| FR-ITEM-3 | Every report has an owner (`reporter_id`). Only the reporter (or a moderator) can edit, close or delete it | M | **Gap G-06** |
+| FR-ITEM-3 | Every report has an owner (`reporter_id`). Only the reporter (or a moderator) can edit, close or delete it | M | **Implemented** for lost reports (G-06, column `owner_id`). Moderators come later |
 | FR-ITEM-4 | Upload 1–5 images per report (JPEG/PNG/WebP, ≤ 5 MB each). Strip EXIF metadata, including GPS. Generate thumbnails | M | Proposed |
 | FR-ITEM-5 | Location: a map pin stored as lat/lng, shown publicly only as an approximate area (rounded to about 500 m, or locality name), plus city | M | Proposed (city only today) |
 | FR-ITEM-6 | Categories from a fixed list: phone, wallet, bag, keys, documents/ID, jewellery, electronics, pet, clothing, other | M | Proposed |
