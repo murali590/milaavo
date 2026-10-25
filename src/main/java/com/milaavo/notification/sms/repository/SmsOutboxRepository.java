@@ -19,12 +19,12 @@ import java.util.UUID;
 public interface SmsOutboxRepository
                 extends JpaRepository<SmsOutbox, UUID> {
 
-
         @Query(value = """
                         SELECT *
                         FROM sms_outbox
                         WHERE status = 'PENDING'
                           AND next_attempt_at <= :now
+                          AND (expires_at IS NULL OR expires_at > :now)
                         ORDER BY created_at ASC
                         LIMIT 50
                         FOR UPDATE SKIP LOCKED
@@ -52,4 +52,15 @@ public interface SmsOutboxRepository
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         Optional<SmsOutbox> findByIdAndClaimTokenAndStatus(
                         UUID id, UUID claimToken, SmsOutboxStatus status);
+
+        @Modifying
+        @Query(value = """
+                        UPDATE sms_outbox
+                        SET status = 'FAILED',
+                            last_error = 'Expired before delivery'
+                        WHERE status = 'PENDING'
+                          AND expires_at IS NOT NULL
+                          AND expires_at <= :now
+                        """, nativeQuery = true)
+        int failExpiredMessages(@Param("now") Instant now);
 }

@@ -16,7 +16,7 @@ public class SmsOutboxService {
     private final SmsOutboxRepository smsOutboxRepository;
 
     @Transactional
-    public void enqueue(String mobileNumber, String message) {
+    public void enqueue(String mobileNumber, String message, Instant expiresAt) {
         SmsOutbox smsOutbox = SmsOutbox.builder()
         .mobileNumber(mobileNumber)
                 .message(message)
@@ -24,6 +24,7 @@ public class SmsOutboxService {
                 .nextAttemptAt(Instant.now())
                 .status(SmsOutboxStatus.PENDING)
                 .attemptCount(0)
+                .expiresAt(expiresAt)
                 .build();
 
         smsOutboxRepository.save(smsOutbox);

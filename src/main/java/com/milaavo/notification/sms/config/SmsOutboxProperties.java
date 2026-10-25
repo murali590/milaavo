@@ -5,12 +5,26 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 @ConfigurationProperties(prefix = "app.sms-outbox")
-public record SmsOutboxProperties(Duration lease) {
+public record SmsOutboxProperties(
+        Duration lease,
+        Duration retryBaseDelay,
+        Duration retryMaxDelay) {
 
     public SmsOutboxProperties {
-        if (lease == null || lease.isZero() || lease.isNegative()) {
+        requirePositive(lease, "lease");
+        requirePositive(retryBaseDelay, "retry-base-delay");
+        requirePositive(retryMaxDelay, "retry-max-delay");
+
+        if (retryMaxDelay.compareTo(retryBaseDelay) < 0) {
             throw new IllegalArgumentException(
-                    "app.sms-outbox.lease must be a positive duration, for example 2m");
+                    "app.sms-outbox.retry-max-delay must be >= retry-base-delay");
+        }
+    }
+
+    private static void requirePositive(Duration value, String name) {
+        if (value == null || value.isZero() || value.isNegative()) {
+            throw new IllegalArgumentException(
+                    "app.sms-outbox." + name + " must be a positive duration");
         }
     }
 }

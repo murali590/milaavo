@@ -24,5 +24,7 @@
         relativeToChangelogFile="true"/>
     <include file="changes/010-add-sms-outbox-claim-token.xml"
         relativeToChangelogFile="true"/>
+    <include file="changes/011-add-sms-outbox-expires-at.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

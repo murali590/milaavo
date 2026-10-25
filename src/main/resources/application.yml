@@ -37,3 +37,5 @@ app:
     poll-delay-ms: 5000
     recovery-delay-ms: 30000
     lease: ${SMS_OUTBOX_LEASE:2m}
+    retry-base-delay: 5s
+    retry-max-delay: 60s

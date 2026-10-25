@@ -107,7 +107,7 @@ WHERE id = '<id>' AND status IN ('PENDING', 'PROCESSING');
 
 ### Provider outage
 
-Retries are exhausted in about 30 seconds (2 + 4 + 8 + 16 s), so an outage of a few minutes moves every message to `FAILED`. Messages created during the outage contain OTPs that will have expired by the time it ends anyway. After the provider recovers, users should request new OTPs. Do not bulk re-queue `FAILED` rows that are older than 5 minutes.
+Retries spread over about 75 seconds (backoff with jitter), so outages up to about a minute are absorbed. Longer outages move messages to `FAILED`, and once an OTP is 5 minutes old its message is failed with `Expired before delivery` instead of being sent late. After the provider recovers, users should request new OTPs. Do not bulk re-queue `FAILED` rows that are older than 5 minutes.
 
 To re-queue recent failures (younger than the OTP validity) once the provider is healthy:
 

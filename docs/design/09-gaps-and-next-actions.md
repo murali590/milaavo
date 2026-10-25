@@ -18,7 +18,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | ~~G-08~~ | ✅ Done | API | ~~Concurrent register with the same number → unique violation → 500~~ | **Fixed (24 Oct 2026):** `saveAndFlush` inside try/catch. Only `uk_app_user_mobile_number` is mapped to 409; other integrity errors still give 500. Verified with two parallel curls (201 + 409) |
 | G-09 | P1 | Config | Only `LocalSmsSender` (`@Profile("local")`) exists, so the app cannot start in any other profile | Real provider sender, or a `@ConditionalOnMissingBean` no-op/fail-closed sender |
 | G-15 | P1 | Security | No per-IP, per-prefix or global limits on `register` and resend. SMS pumping risk | Rate limiter (Bucket4j / gateway), CAPTCHA after N attempts, prefix allow-list |
-| G-17 | P1 | Outbox | Retries finish in ~30 s and ignore OTP expiry | `expires_at` on outbox rows, backoff with jitter and a cap |
+| ~~G-17~~ | ✅ Done | Outbox | ~~Retries finish in ~30 s and ignore OTP expiry~~ | **Fixed (25 Oct 2026):** changeset 011 adds `expires_at` (set to the OTP expiry). Capped exponential backoff with jitter (`retry-base-delay` 5s, `retry-max-delay` 60s, validated at startup). Expired messages are never claimed or retried |
 | ~~G-11~~ | ✅ Done | API | ~~`CreateReportRequest` has no `@Size`. Over-length values → DB error → 500~~ | **Fixed (24 Oct 2026):** `@Size` on the request DTO: item name 200, description 2000, city 100 (same as the DB columns). Over-length now gives 400 `VALIDATION_ERROR`. Validation is on the DTO, not the entity, because entity checks run too late (at save) |
 | G-12 | P2 | Security | `org.springframework.security: TRACE` in the base config | `INFO` by default, `DEBUG` in `application-local.yml` |
 | G-13 | P2 | Security | JWT issuer not validated on decode | `JwtValidators.createDefaultWithIssuer("milaavo")` |
@@ -41,7 +41,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | 1 | Confirm the native claim query no longer has `@Lock` | **Done.** `SmsOutboxRepository.claimPendingMessages` uses SQL `FOR UPDATE SKIP LOCKED` with no `@Lock`. (`@Lock` remains on the JPQL queries `findByIdForUpdate` and `findForVerification`, where it is correct) |
 | 2 | Move provider calls outside DB transactions | **Done** (G-02) |
 | 3 | Configurable lease, prevent stale-worker updates | **Done** (G-03, G-04) |
-| 4 | Define retry semantics, timeouts, backoff, idempotency, ambiguous outcomes | Designed in [05](05-sms-outbox.md). G-05 done. Implementation open: G-17 |
+| 4 | Define retry semantics, timeouts, backoff, idempotency, ambiguous outcomes | **Done** (G-05, G-17). Provider idempotency key still open, for when a real provider is added |
 | 5 | Verify OTP expiry, one-time use, attempt limits, rate limits, secure storage | **Verified** for `otp_challenge` ([04](04-auth-otp-security.md)). Open: G-01 (plaintext in outbox), G-15 (IP/global limits) |
 | 6 | Run the manual verification scenarios | Open. Scenarios in [05](05-sms-outbox.md#verification-scenarios) |
 | 7 | README with architecture, env vars, migrations, run commands, endpoints, recovery | **Done.** [README](../../README.md) + [runbook](../runbook/sms-outbox.md) |
@@ -49,7 +49,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 ## Suggested order of work
 
 1. ~~**G-06 report ownership.**~~ ✅ Done. A strong interview example of "authentication is not authorization".
-2. **Outbox refactor**, one step at a time: ~~G-02~~ ✅, ~~G-05~~ ✅, ~~G-04~~ ✅, ~~G-03~~ ✅. Next: G-17, then G-01. It is the core distributed-systems story of this project.
+2. **Outbox refactor**, one step at a time: ~~G-02~~ ✅, ~~G-05~~ ✅, ~~G-04~~ ✅, ~~G-03~~ ✅, ~~G-17~~ ✅. Next: G-01. It is the core distributed-systems story of this project.
 3. **G-01 OTP at rest**, together with the outbox refactor, since it touches the same table.
 4. **Error mapping:** ~~G-07~~ ✅, ~~G-08~~ ✅, ~~G-11~~ ✅, ~~G-22~~ ✅ all done.
 5. **G-15 rate limiting**, then **G-23 observability**.

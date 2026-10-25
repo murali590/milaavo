@@ -53,19 +53,23 @@ Recovery (`@Scheduled` every 30 s): `UPDATE … SET status='PENDING', next_attem
 - **Per-message try/catch in the worker.** One bad message does not stop the batch.
 - **Error text truncated** to fit `last_error VARCHAR(500)`.
 
-### Retry schedule (current)
+### Retry schedule (current, since G-17 on 25 Oct 2026)
 
-`next_attempt_at = now + 2^attempt_count` seconds:
+Capped exponential backoff with equal jitter: `wait = min(retry-max-delay, retry-base-delay × 2^(attempt-1))`, then a random value between `wait/2` and `wait`. Defaults: base `5s`, max `60s`.
 
-| Attempt that failed | Next delay | Cumulative |
+| Attempt that failed | Exponential | Actual wait |
 |---|---|---|
-| 1 | 2 s | 2 s |
-| 2 | 4 s | 6 s |
-| 3 | 8 s | 14 s |
-| 4 | 16 s | 30 s |
+| 1 | 5 s | 2.5 – 5 s |
+| 2 | 10 s | 5 – 10 s |
+| 3 | 20 s | 10 – 20 s |
+| 4 | 40 s | 20 – 40 s |
 | 5 | → `FAILED` | |
 
-Plus up to 5 s of poll delay per hop. There is no jitter.
+About 75 s at most in total, so a one-minute provider outage no longer fails every OTP. Jitter spreads retries out, so they don't all hit the provider at once (thundering herd). Each wait is effectively rounded up to the next poll (every 5 s).
+
+**Expiry:** every OTP message has `expires_at` = the OTP's expiry. Expired rows are never claimed, the recovery job marks expired `PENDING` rows `FAILED` ("Expired before delivery"), and `recordFailure` fails a message straight away if its next retry would land after expiry.
+
+Before G-17 the waits were 2, 4, 8, 16 s with no jitter, finishing in about 30 s.
 
 > **Update 24 Oct 2026 (G-02 done):** the provider call now happens with no transaction open. `SmsOutboxProcessor` calls `SmsOutboxStateService.loadForSending`, then `smsSender.send`, then `markSent` or `recordFailure`, each a short transaction. The sequence diagram above shows the old flow. F1 (slow provider holding connections) is fixed; F2 and F7 remain, because at-least-once delivery can't be avoided.
 
@@ -77,8 +81,8 @@ Plus up to 5 s of poll delay per hop. There is no jitter.
 | F2 | Send succeeds, then the commit fails or the app crashes | TX3 rolls back, so the row stays `PROCESSING` (TX2 committed it), with no attempt counted | Recovered after 2 min and **sent again** | G-02 |
 | F3 | Send takes longer than the lease (or the instance freezes during a GC pause) | **Fixed for state (G-03, G-04):** each claim gets a new `claim_token`; outcome updates lock the row and require the token, so A's late update matches nothing and logs "Lease lost". Verified with two instances on 25 Oct 2026 | Duplicate SMS still possible (at-least-once), but no lost update | ~~G-03~~ ✅ ~~G-04~~ ✅ |
 | F4 | Message reliably crashes the processor (poison message) | **Fixed (G-05):** the attempt is counted at claim, and recovery fails the row at the limit | Stops after 5 attempts | ~~G-05~~ ✅ |
-| F5 | Provider outage longer than ~30 s | All messages reach `FAILED` quickly | Lost OTPs until users resend | G-17 |
-| F6 | Retries continue past OTP expiry | A message retried at minute 4 delivers a code that expires seconds later | Wasted SMS cost, confused users | G-17 |
+| F5 | Provider outage | **Improved (G-17):** retries now span about 75 s with jitter, instead of 30 s | Survives short outages; longer ones still need users to resend | ~~G-17~~ ✅ |
+| F6 | Retries continue past OTP expiry | **Fixed (G-17):** `expires_at` stops claims and retries after the OTP expires | No late, useless SMS | ~~G-17~~ ✅ |
 | F7 | Provider accepts, but the client times out | Treated as a failure and retried | Duplicate SMS | G-02 |
 | F8 | Database is down | Claim throws, the worker logs and retries next tick | Correct: nothing is lost | |
 

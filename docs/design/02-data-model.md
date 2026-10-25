@@ -116,6 +116,7 @@ Index: `idx_otp_resend_attempt_user_requested (user_id, requested_at)`. It serve
 | `attempt_count` | INT | NOT NULL, default 0 | Attempts **started**: incremented in the claim transaction, which commits before the send (G-05) |
 | `next_attempt_at` | TIMESTAMPTZ | NOT NULL | Earliest time the row can be claimed |
 | `processing_started_at` | TIMESTAMPTZ | nullable | Set on claim, cleared on outcome. Used by recovery |
+| `expires_at` | TIMESTAMPTZ | nullable | After this time the message is never claimed or retried (changeset 011). For OTP SMS it equals the OTP's expiry. Empty means "never expires" |
 | `claim_token` | UUID | nullable | New random value on each claim (changeset 010). Outcome updates must match it; recovery clears it. Stops a stale worker from overwriting (G-03) |
 | `sent_at` | TIMESTAMPTZ | nullable | |
 | `last_error` | VARCHAR(500) | nullable | Provider exception message, truncated |
@@ -151,7 +152,7 @@ Each one is a new changeset. Never edit an applied changeset, because Liquibase 
 | P-2 | `lost_report.updated_at TIMESTAMPTZ` and `version BIGINT` (`@Version`) | Audit trail and optimistic locking on concurrent PUTs |
 | P-3 | Partial index `CREATE INDEX idx_sms_outbox_due ON sms_outbox (next_attempt_at) WHERE status = 'PENDING'` | Matches the claim query. The existing `(status, created_at)` index cannot filter on `next_attempt_at`. Verify with `EXPLAIN ANALYZE` on realistic data first |
 | ~~P-4~~ | ~~`sms_outbox.claim_token UUID`~~ | ✅ Done in changeset 010 (G-03) |
-| P-5 | `sms_outbox.expires_at TIMESTAMPTZ` | Stop retrying OTP messages after the OTP itself has expired (G-17) |
+| ~~P-5~~ | ~~`sms_outbox.expires_at`~~ | ✅ Done in changeset 011 (G-17) |
 | P-6 | `CHECK (status IN (...))` on `app_user`, `sms_outbox`, `lost_report` | The database should enforce invariants even if a bug or manual SQL writes a bad value |
 | P-7 | Retention job: delete or redact `sms_outbox.message` once `SENT`/`FAILED`, purge old `otp_challenge` and `otp_resend_attempt` rows | Limits personal data and table growth (G-01, G-16) |
 

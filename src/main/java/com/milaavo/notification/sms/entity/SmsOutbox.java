@@ -58,4 +58,7 @@ public class SmsOutbox {
     @Column(name = "claim_token")
     private UUID claimToken;
 
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
 }

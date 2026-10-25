@@ -134,6 +134,8 @@ From `src/main/resources/application.yml`:
 | `app.sms-outbox.poll-delay-ms` | `5000` | Delay between outbox claim runs |
 | `app.sms-outbox.recovery-delay-ms` | `30000` | Delay between stale-PROCESSING recovery runs |
 | `app.sms-outbox.lease` | `2m` (env `SMS_OUTBOX_LEASE`) | How long a worker owns a claimed message before recovery may take it back. Must be positive, or the app won't start |
+| `app.sms-outbox.retry-base-delay` | `5s` | First retry wait. Each retry doubles it, with jitter |
+| `app.sms-outbox.retry-max-delay` | `60s` | Longest retry wait. Must be ≥ base delay |
 | `logging.level.org.springframework.security` | `TRACE` | Very noisy. Lower it outside debugging (see Gap G-12) |
 
 Hard-coded values that should become configuration are listed in [docs/design/09-gaps-and-next-actions.md](docs/design/09-gaps-and-next-actions.md).

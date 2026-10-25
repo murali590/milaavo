@@ -84,9 +84,8 @@ public class OtpServiceImpl implements OtpService {
 
         OtpChallenge savedChallenge = otpRepository.save(challenge);
 
-        // TODO: Move SMS delivery to an after-commit event or transactional outbox.
         smsOutboxService.enqueue(mobileNumber, "Your Milaavo verification code is " + otp
-                + ". It expires in 5 minutes.");
+                + ". It expires in 5 minutes.", challenge.getExpiresAt());
 
         return savedChallenge.getId();
 

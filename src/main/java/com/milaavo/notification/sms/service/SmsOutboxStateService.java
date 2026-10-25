@@ -1,5 +1,6 @@
 package com.milaavo.notification.sms.service;
 
+import com.milaavo.notification.sms.config.SmsOutboxProperties;
 import com.milaavo.notification.sms.dto.ClaimedMessage;
 import com.milaavo.notification.sms.entity.SmsOutbox;
 import com.milaavo.notification.sms.enums.SmsOutboxStatus;
@@ -9,9 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class SmsOutboxStateService {
     private static final int MAX_ERROR_LENGTH = 500;
 
     private final SmsOutboxRepository smsOutboxRepository;
+    private final SmsOutboxProperties properties;
 
     @Transactional(readOnly = true)
     public Optional<SmsOutbox> loadForSending(ClaimedMessage claimed) {
@@ -51,13 +54,19 @@ public class SmsOutboxStateService {
             if (message.getAttemptCount() >= MAX_ATTEMPTS) {
                 message.setStatus(SmsOutboxStatus.FAILED);
             } else {
-                message.setStatus(SmsOutboxStatus.PENDING);
-                long retryDelaySeconds = 1L << message.getAttemptCount();
-                message.setNextAttemptAt(Instant.now().plusSeconds(retryDelaySeconds));
-            }
+                Duration delay = retryDelay(message.getAttemptCount());
+                Instant nextAttemptAt = Instant.now().plus(delay);
 
-            log.warn("SMS delivery failed for outbox ID {}. Attempt {} of {}",
-                    message.getId(), message.getAttemptCount(), MAX_ATTEMPTS);
+                if (message.getExpiresAt() != null && !nextAttemptAt.isBefore(message.getExpiresAt())) {
+                    message.setStatus(SmsOutboxStatus.FAILED);
+                    log.warn("Not retrying SMS outbox ID {}: next attempt would be after expiry", message.getId());
+                } else {
+                    message.setStatus(SmsOutboxStatus.PENDING);
+                    message.setNextAttemptAt(nextAttemptAt);
+                    log.warn("SMS delivery failed for outbox ID {}. Attempt {} of {}. Retrying in {} ms",
+                            message.getId(), message.getAttemptCount(), MAX_ATTEMPTS, delay.toMillis());
+                }
+            }
         }, () -> logLeaseLost(claimed, "failure"));
     }
 
@@ -76,5 +85,18 @@ public class SmsOutboxStateService {
             return "SMS delivery failed";
         }
         return error.length() > MAX_ERROR_LENGTH ? error.substring(0, MAX_ERROR_LENGTH) : error;
+    }
+
+    // Exponential backoff with a cap and "equal jitter": a random wait between
+    // delay/2 and delay.
+    private Duration retryDelay(int attemptCount) {
+        long baseMillis = properties.retryBaseDelay().toMillis();
+        long maxMillis = properties.retryMaxDelay().toMillis();
+
+        int exponent = Math.min(attemptCount - 1, 20);
+        long exponential = Math.min(maxMillis, baseMillis * (1L << exponent));
+
+        long half = exponential / 2;
+        return Duration.ofMillis(half + ThreadLocalRandom.current().nextLong(half + 1));
     }
 }
