@@ -2,7 +2,9 @@
 
 Use this when OTP SMS are late, missing, duplicated, or the `sms_outbox` table looks unhealthy. Design background: [05-sms-outbox.md](../design/05-sms-outbox.md).
 
-> `sms_outbox.message` currently contains the **plaintext OTP** (Gap G-01), and `mobile_number` is personal data. Do not paste query results containing these columns into tickets, chat or screenshots.
+> `sms_outbox.message` is encrypted (AES-256-GCM) while a message is waiting, and replaced by `[redacted]` once it's SENT or FAILED (G-01). `mobile_number` is still personal data. Do not paste query results containing it into tickets, chat or screenshots.
+>
+> **Never change `SMS_OUTBOX_ENCRYPTION_KEY` while messages are pending.** Messages encrypted with the old key can't be decrypted (`Unable to decrypt value`, caused by `AEADBadTagException: Tag mismatch`) and will end as FAILED. Users then need to resend.
 
 ## How it works, in one paragraph
 

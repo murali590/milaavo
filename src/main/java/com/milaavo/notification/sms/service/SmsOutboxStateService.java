@@ -22,6 +22,7 @@ public class SmsOutboxStateService {
 
     public static final int MAX_ATTEMPTS = 5;
     private static final int MAX_ERROR_LENGTH = 500;
+    public static final String REDACTED = "[redacted]";
 
     private final SmsOutboxRepository smsOutboxRepository;
     private final SmsOutboxProperties properties;
@@ -39,6 +40,7 @@ public class SmsOutboxStateService {
             message.setStatus(SmsOutboxStatus.SENT);
             message.setSentAt(Instant.now());
             message.setLastError(null);
+            message.setMessage(REDACTED);
             message.setProcessingStartedAt(null);
             message.setClaimToken(null);
         }, () -> logLeaseLost(claimed, "SENT"));
@@ -52,6 +54,7 @@ public class SmsOutboxStateService {
             message.setClaimToken(null);
 
             if (message.getAttemptCount() >= MAX_ATTEMPTS) {
+                message.setMessage(REDACTED);
                 message.setStatus(SmsOutboxStatus.FAILED);
             } else {
                 Duration delay = retryDelay(message.getAttemptCount());
@@ -59,6 +62,7 @@ public class SmsOutboxStateService {
 
                 if (message.getExpiresAt() != null && !nextAttemptAt.isBefore(message.getExpiresAt())) {
                     message.setStatus(SmsOutboxStatus.FAILED);
+                    message.setMessage(REDACTED);
                     log.warn("Not retrying SMS outbox ID {}: next attempt would be after expiry", message.getId());
                 } else {
                     message.setStatus(SmsOutboxStatus.PENDING);

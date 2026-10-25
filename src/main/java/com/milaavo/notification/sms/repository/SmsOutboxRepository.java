@@ -17,50 +17,55 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SmsOutboxRepository
-                extends JpaRepository<SmsOutbox, UUID> {
+    extends JpaRepository<SmsOutbox, UUID> {
 
-        @Query(value = """
-                        SELECT *
-                        FROM sms_outbox
-                        WHERE status = 'PENDING'
-                          AND next_attempt_at <= :now
-                          AND (expires_at IS NULL OR expires_at > :now)
-                        ORDER BY created_at ASC
-                        LIMIT 50
-                        FOR UPDATE SKIP LOCKED
-                        """, nativeQuery = true)
-        List<SmsOutbox> claimPendingMessages(@Param("now") Instant now);
+  @Query(value = """
+      SELECT *
+      FROM sms_outbox
+      WHERE status = 'PENDING'
+        AND next_attempt_at <= :now
+        AND (expires_at IS NULL OR expires_at > :now)
+      ORDER BY created_at ASC
+      LIMIT 50
+      FOR UPDATE SKIP LOCKED
+      """, nativeQuery = true)
+  List<SmsOutbox> claimPendingMessages(@Param("now") Instant now);
 
-        @Modifying
-        @Query(value = """
-                        UPDATE sms_outbox
-                        SET status = CASE
-                                WHEN attempt_count >= :maxAttempts THEN 'FAILED'
-                                ELSE 'PENDING'
-                            END,
-                            next_attempt_at = CURRENT_TIMESTAMP,
-                            claim_token = NULL,
-                            processing_started_at = NULL,
-                            last_error = 'Recovered stale processing message'
-                        WHERE status = 'PROCESSING'
-                          AND processing_started_at < :cutoff
-                        """, nativeQuery = true)
-        int recoverStaleProcessingMessages(
-                        @Param("cutoff") Instant cutoff,
-                        @Param("maxAttempts") int maxAttempts);
+  @Modifying
+  @Query(value = """
+      UPDATE sms_outbox
+      SET status = CASE
+              WHEN attempt_count >= :maxAttempts THEN 'FAILED'
+              ELSE 'PENDING'
+          END,
+          message = CASE
+              WHEN attempt_count >= :maxAttempts THEN '[redacted]'
+              ELSE message
+          END,
+          next_attempt_at = CURRENT_TIMESTAMP,
+          claim_token = NULL,
+          processing_started_at = NULL,
+          last_error = 'Recovered stale processing message'
+      WHERE status = 'PROCESSING'
+        AND processing_started_at < :cutoff
+      """, nativeQuery = true)
+  int recoverStaleProcessingMessages(
+      @Param("cutoff") Instant cutoff,
+      @Param("maxAttempts") int maxAttempts);
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
-        Optional<SmsOutbox> findByIdAndClaimTokenAndStatus(
-                        UUID id, UUID claimToken, SmsOutboxStatus status);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  Optional<SmsOutbox> findByIdAndClaimTokenAndStatus(
+      UUID id, UUID claimToken, SmsOutboxStatus status);
 
-        @Modifying
-        @Query(value = """
-                        UPDATE sms_outbox
-                        SET status = 'FAILED',
-                            last_error = 'Expired before delivery'
-                        WHERE status = 'PENDING'
-                          AND expires_at IS NOT NULL
-                          AND expires_at <= :now
-                        """, nativeQuery = true)
-        int failExpiredMessages(@Param("now") Instant now);
+  @Modifying
+  @Query(value = """
+      UPDATE sms_outbox
+      SET status = 'FAILED', 
+          message = '[redacted]', 
+          last_error = 'Expired before delivery'
+      WHERE status = 'PENDING'
+        AND expires_at IS NOT NULL
+        AND expires_at <= :now
+      """, nativeQuery = true)
+  int failExpiredMessages(@Param("now") Instant now);
 }

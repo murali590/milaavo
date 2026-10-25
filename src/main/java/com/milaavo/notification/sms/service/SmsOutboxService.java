@@ -14,12 +14,15 @@ import java.time.Instant;
 public class SmsOutboxService {
 
     private final SmsOutboxRepository smsOutboxRepository;
+    private final SmsMessageCipher smsMessageCipher;
 
     @Transactional
     public void enqueue(String mobileNumber, String message, Instant expiresAt) {
+        String encryptedMessage = smsMessageCipher.encrypt(message);
+
         SmsOutbox smsOutbox = SmsOutbox.builder()
-        .mobileNumber(mobileNumber)
-                .message(message)
+                .mobileNumber(mobileNumber)
+                .message(encryptedMessage)
                 .createdAt(Instant.now())
                 .nextAttemptAt(Instant.now())
                 .status(SmsOutboxStatus.PENDING)

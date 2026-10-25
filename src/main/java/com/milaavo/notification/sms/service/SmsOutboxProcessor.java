@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -14,6 +13,7 @@ public class SmsOutboxProcessor {
 
         private final SmsOutboxStateService stateService;
         private final SmsSender smsSender;
+        private final SmsMessageCipher smsMessageCipher;
 
         // Not @Transactional on purpose: no DB connection is held during the provider
         // call.
@@ -26,7 +26,8 @@ public class SmsOutboxProcessor {
                 SmsOutbox message = loaded.get();
 
                 try {
-                        smsSender.send(message.getMobileNumber(), message.getMessage());
+                        String decryptedMessage = smsMessageCipher.decrypt(message.getMessage());
+                        smsSender.send(message.getMobileNumber(), decryptedMessage);
                 } catch (Exception ex) {
                         stateService.recordFailure(claimed, ex);
                         return;

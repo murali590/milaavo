@@ -126,7 +126,7 @@ sequenceDiagram
 7. **Backoff with jitter and a cap**, for example `min(cap, base × 2^n) × random(0.5, 1.0)`. For OTP the cap is set by expiry. Generic notifications could use longer caps such as 1 min, 5 min or 30 min (F5).
 8. **Classify errors.** Retryable (timeouts, 5xx, 429) versus permanent (invalid number, blocked). Permanent errors go straight to `FAILED`.
 9. **Provider idempotency.** If the provider accepts a client reference, send the outbox `id` as that reference. The provider then deduplicates retries (F2, F7).
-10. **Do not store the plaintext OTP** (G-01). Options, from best to simplest:
+10. ✅ **Do not store the plaintext OTP** (G-01, done 25 Oct 2026 with encryption + redaction). The options that were considered:
     - Use the provider's OTP/template API and pass the code only at send time. The code then has to come from somewhere, so encrypt it (next option).
     - Store `template_id` plus encrypted params (AES-GCM with a key from the secret store), decrypt only at send time, and null the column after `SENT`/`FAILED`.
     - At minimum, a retention job that blanks `message` after completion and purges old rows (P-7).

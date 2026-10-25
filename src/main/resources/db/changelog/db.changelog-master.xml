@@ -26,5 +26,7 @@
         relativeToChangelogFile="true"/>
     <include file="changes/011-add-sms-outbox-expires-at.xml"
         relativeToChangelogFile="true"/>
+    <include file="changes/012-redact-existing-sms-outbox-messages.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="012-redact-existing-sms-outbox-messages" author="milaavo">
+        <!-- Unfinished old rows hold plaintext that can't be decrypted: stop them. -->
+        <update tableName="sms_outbox">
+            <column name="status" value="FAILED"/>
+            <column name="last_error" value="Stopped by G-01 migration (plaintext message)"/>
+            <where>status IN ('PENDING', 'PROCESSING')</where>
+        </update>
+
+        <!-- Remove every plaintext OTP stored before encryption existed. -->
+        <update tableName="sms_outbox">
+            <column name="message" value="[redacted]"/>
+        </update>
+    </changeSet>
+</databaseChangeLog>

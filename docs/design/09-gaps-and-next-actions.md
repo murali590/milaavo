@@ -8,7 +8,8 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 
 | Id | Pri | Area | Gap | Fix |
 |---|---|---|---|---|
-| G-01 | P0 | OTP / SMS | Plaintext OTP stored in `sms_outbox.message` and never removed | Encrypt or template the message, null it after completion, add retention ([05](05-sms-outbox.md#changes-in-order) item 10) |
+| ~~G-01~~ | ✅ Done | OTP / SMS | ~~Plaintext OTP stored in `sms_outbox.message` and never removed~~ | **Fixed (25 Oct 2026):** AES-256-GCM via a reusable `common.security.crypto.AesGcmCipher` (random IV per message), wrapped by `SmsMessageCipher` with its own key `SMS_OUTBOX_ENCRYPTION_KEY`. Message redacted to `[redacted]` once SENT or FAILED. Changeset 012 redacted old plaintext rows. Tamper test gave `AEADBadTagException` as expected. **Open:** `failExpiredMessages` does not redact yet |
+| G-28 | P2 | Outbox | All send errors are retried the same way, even permanent ones (decrypt failure, invalid number) | Classify errors as retryable or permanent; fail permanent ones immediately. Do it when adding a real SMS provider |
 | ~~G-06~~ | ✅ Done | Reports | ~~No `owner_id`. Any authenticated user can read, update or delete any report (BOLA)~~ | **Fixed (24 Oct 2026):** changeset 008 adds `owner_id`. `AuthUser` + `@CurrentUser` give the logged-in user to controllers. All report queries filter by owner, and other users' reports return 404 |
 | ~~G-02~~ | ✅ Done | Outbox | ~~`smsSender.send()` runs inside `@Transactional` `process()`~~ | **Fixed (24 Oct 2026):** `SmsOutboxProcessor` has no transaction. `SmsOutboxStateService` (separate bean) has short `loadForSending` / `markSent` / `recordFailure` transactions. Proved with `pg_stat_activity`: no more "idle in transaction" during a slow send |
 | ~~G-03~~ | ✅ Done | Outbox | ~~No claim token or version. A stale worker overwrites a reclaimed row~~ | **Fixed (25 Oct 2026):** changeset 010 adds `claim_token`. Claim sets a new token, recovery clears it, and `markSent`/`recordFailure` lock the row by `(id, token, PROCESSING)`. A stale worker logs "Lease lost" and writes nothing. Verified with two instances |
@@ -32,7 +33,9 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-10 | P2 | Code | Dead code: `OtpSmsEvent`/`OtpSmsEventListener`, unused `smsSender`/`eventPublisher` in `OtpServiceImpl`, unused `findTop50…`, stale TODO | Delete |
 | G-23 | P2 | Ops | No correlation id, metrics, Actuator or readiness | [07](07-observability-operations.md) |
 | G-24 | P2 | Code | `UserAlreayActiveException` typo. `ResentVerificationOTP*` DTO names. Field injection in the report module | Rename to `UserAlreadyActiveException` / `ResendVerificationOtp*`, use constructor injection |
-| G-25 | P2 | Tests | Only report tests exist. OTP, auth and outbox flows have none. `contextLoads` needs a real DB and env | Dedicated test session: Testcontainers, OTP concurrency tests, outbox scenarios ([05](05-sms-outbox.md#verification-scenarios)) |
+| G-25 | P2 | Tests | Only report tests exist. OTP, auth and outbox flows have none. `contextLoads` needs a real DB and env. `application.yml` has `${SPRING_PROFILES_ACTIVE}` with no default, so tests fail unless the variable is set | Dedicated test session: Testcontainers, OTP concurrency tests, outbox scenarios ([05](05-sms-outbox.md#verification-scenarios)). Default the profile to `local` |
+| G-26 | P2 | Perf | `spring.jpa.open-in-view` is on by default (startup warning): a DB connection stays open for the whole HTTP request, not just the service call | `spring.jpa.open-in-view: false` |
+| G-27 | P1 | Security | No CORS configuration. A browser front end on another origin (for example the React dev server) will be blocked | Explicit allow-list of front-end origins in `SecurityConfig`. Needed before the frontend |
 
 ## Status of the original design document's next actions
 

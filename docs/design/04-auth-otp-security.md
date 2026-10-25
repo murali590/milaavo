@@ -84,7 +84,7 @@ Concurrency: two requests with the same correct OTP both reach `FOR UPDATE`. The
 | One-time use | Implemented | Row lock + `consumed_at` |
 | Only the latest OTP works | Implemented | Supersede on issue |
 | Resend throttling | Implemented | Per user: 60 s cooldown, 3 per 15 min |
-| **OTP not stored in plaintext anywhere** | **Gap G-01** | The SMS text with the code sits in `sms_outbox.message` forever. Anyone with read access to the database can log in as a pending user within the 5-minute window |
+| OTP not stored in plaintext anywhere | Implemented (G-01) | The outbox message is AES-256-GCM encrypted with its own key and redacted once sent or failed. Hash vs encryption: `otp_challenge` only needs to **compare** (HMAC, one-way); the outbox must **send the real text** (encryption, two-way) |
 | Per-IP / per-number-prefix / global SMS limits | **Gap G-15** | `register` has no limit at all, so a script can register many numbers and trigger SMS (toll fraud / SMS pumping) |
 | Attempt limit across challenges | **Gap** | 5 tries per challenge × (1 + 3 resends) = 20 guesses per 15 minutes per user. Out of 10⁶ codes that is low risk, but monitor it |
 | OTP never logged | Partly | `LocalSmsSender` logs the full message. Acceptable for `local` only. A real sender must never log message bodies |

@@ -39,3 +39,4 @@ app:
     lease: ${SMS_OUTBOX_LEASE:2m}
     retry-base-delay: 5s
     retry-max-delay: 60s
+    encryption-key: ${SMS_OUTBOX_ENCRYPTION_KEY}

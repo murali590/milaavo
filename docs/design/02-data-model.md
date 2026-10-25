@@ -111,7 +111,7 @@ Index: `idx_otp_resend_attempt_user_requested (user_id, requested_at)`. It serve
 |---|---|---|---|
 | `id` | UUID | PK, default `gen_random_uuid()` | |
 | `mobile_number` | VARCHAR(20) | NOT NULL | |
-| `message` | VARCHAR(1000) | NOT NULL | **Contains the plaintext OTP** (Gap G-01) |
+| `message` | VARCHAR(1000) | NOT NULL | Base64 of AES-256-GCM `iv + ciphertext + tag` while waiting; `[redacted]` once SENT or FAILED (G-01). Old plaintext rows were redacted by changeset 012 |
 | `status` | VARCHAR(20) | NOT NULL, default `PENDING` | `PENDING`, `PROCESSING`, `SENT`, `FAILED`. No CHECK constraint |
 | `attempt_count` | INT | NOT NULL, default 0 | Attempts **started**: incremented in the claim transaction, which commits before the send (G-05) |
 | `next_attempt_at` | TIMESTAMPTZ | NOT NULL | Earliest time the row can be claimed |

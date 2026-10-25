@@ -52,6 +52,7 @@ cp .env.example .env
 | `DB_PASSWORD` | yes | |
 | `JWT_SECRET` | yes | **Base64**-encoded, at least 32 bytes after decoding. Startup fails otherwise (`JwtConfig`). |
 | `OTP_HMAC_SECRET` | yes | **Base64**-encoded, at least 32 bytes after decoding (`OtpConfig`). Use a different value from `JWT_SECRET`. |
+| `SMS_OUTBOX_ENCRYPTION_KEY` | yes | **Base64**, exactly 32 bytes decoded (AES-256). Encrypts SMS outbox messages. Use its own value, and never change it while SMS are pending |
 | `SPRING_PROFILES_ACTIVE` | yes | Use `local`. Today the only `SmsSender` implementation is `LocalSmsSender` (`@Profile("local")`), so any other profile fails at startup with a missing bean. |
 
 Generate secrets with:
