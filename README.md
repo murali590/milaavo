@@ -137,6 +137,7 @@ From `src/main/resources/application.yml`:
 | `app.sms-outbox.lease` | `2m` (env `SMS_OUTBOX_LEASE`) | How long a worker owns a claimed message before recovery may take it back. Must be positive, or the app won't start |
 | `app.sms-outbox.retry-base-delay` | `5s` | First retry wait. Each retry doubles it, with jitter |
 | `app.sms-outbox.retry-max-delay` | `60s` | Longest retry wait. Must be ≥ base delay |
+| `app.cors.allowed-origins` | `http://localhost:5173` (env `CORS_ALLOWED_ORIGINS`, comma-separated) | Front-end origins allowed to call the API from a browser. `*` is rejected at startup |
 | `spring.jpa.open-in-view` | `false` | DB connections are held only during service calls, not the whole request (G-26) |
 
 Security logging uses Spring's default (`INFO`). To see the security filter details for one run: `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG ./scripts/run-local.sh`.

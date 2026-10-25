@@ -35,7 +35,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-24 | P2 | Code | `UserAlreayActiveException` typo. `ResentVerificationOTP*` DTO names. Field injection in the report module | Rename to `UserAlreadyActiveException` / `ResendVerificationOtp*`, use constructor injection |
 | G-25 | P2 | Tests | Only report tests exist. OTP, auth and outbox flows have none. `contextLoads` needs a real DB and env. `application.yml` has `${SPRING_PROFILES_ACTIVE}` with no default, so tests fail unless the variable is set | Dedicated test session: Testcontainers, OTP concurrency tests, outbox scenarios ([05](05-sms-outbox.md#verification-scenarios)). Default the profile to `local` |
 | ~~G-26~~ | ✅ Done | Perf | ~~`spring.jpa.open-in-view` is on by default: a DB connection stays open for the whole HTTP request~~ | **Fixed (25 Oct 2026):** `spring.jpa.open-in-view: false`. Safe because controllers return DTOs only |
-| G-27 | P1 | Security | No CORS configuration. A browser front end on another origin (for example the React dev server) will be blocked | Explicit allow-list of front-end origins in `SecurityConfig`. Needed before the frontend |
+| ~~G-27~~ | ✅ Done | Security | ~~No CORS configuration. A browser front end on another origin will be blocked~~ | **Fixed (25 Oct 2026):** `.cors(...)` in `SecurityConfig` with an allow-list from `app.cors.allowed-origins` (`CORS_ALLOWED_ORIGINS`, default `http://localhost:5173`); `*` is rejected at startup. Preflights are answered before authentication |
 
 ## Status of the original design document's next actions
 

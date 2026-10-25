@@ -153,7 +153,7 @@ It is wired in `SecurityConfig` with `.jwt(jwt -> jwt.jwtAuthenticationConverter
 | Secrets in env vars, `.env` gitignored | Implemented |
 | Separate keys for JWT and OTP HMAC | Implemented (two variables). Document that they must differ |
 | Security logging (G-12) | Fixed: default `INFO`. For one debugging run use `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG` |
-| CORS | Not configured. Fine for non-browser clients. Add an explicit allow-list before a web front end |
+| CORS | Implemented (G-27): exact origin allow-list from config, `*` refused, methods `GET POST PUT PATCH DELETE OPTIONS`, headers `Authorization` and `Content-Type`, preflight cached 1 h, no credentials. Spring rejects unlisted origins with 403, but the **browser** is the real enforcer: CORS protects users, not the API (curl ignores it) |
 | Security headers | Spring Security defaults (HSTS on HTTPS, `X-Content-Type-Options`, frame options) |
 | TLS | Expected to terminate at the load balancer or ingress (Proposed, [08](08-configuration-deployment.md)) |
 | Mobile number normalization (G-14) | Only `trim()`. `+91 98…`, `098…` and `98…` become different accounts. Normalize to E.164 (for example with libphonenumber) before the uniqueness check |
