@@ -39,6 +39,12 @@ createdb milaavo
 
 ### 2. Environment variables
 
+All backend commands run from the `backend/` folder:
+
+```bash
+cd backend
+```
+
 Copy the template and fill it in:
 
 ```bash
@@ -124,7 +130,7 @@ Full contract, status codes and error codes: [docs/design/03-api.md](docs/design
 
 ## Configuration reference
 
-From `src/main/resources/application.yml`:
+From `backend/src/main/resources/application.yml`:
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -147,18 +153,27 @@ Hard-coded values that should become configuration are listed in [docs/design/09
 ## Project layout
 
 ```
-src/main/java/com/milaavo
+milaavo/
+├── backend/              Spring Boot API (Gradle project: build.gradle, gradlew, src/, scripts/, .env)
+├── frontend/             React + TypeScript web app (Vite)
+└── docs/                 product, design, runbook and SDE3 docs
+```
+
+Backend packages (`backend/src/main/java/com/milaavo`):
+
+```
 ├── auth/                 register, login, verify mobile, resend OTP, JWT issuing
 ├── otp/                  OTP challenge issue/verify, HMAC hashing, resend limits
-├── notification/sms/     outbox entity, enqueue, claim, process, recover, SmsSender
+├── notification/sms/     outbox entity, enqueue, claim, process, recover, SmsSender, message encryption
 ├── report/               lost-item report CRUD and pagination
 ├── common/dto/           ApiErrorResponse
-├── common/security/      AuthUser, @CurrentUser, JWT → AuthUser converter
-├── config/               security filter chain, JWT, password encoder, 401/403 JSON
+├── common/security/      AuthUser, @CurrentUser, JWT → AuthUser converter, AES-GCM cipher
+├── config/               security filter chain, CORS, JWT, password encoder, 401/403 JSON
 ├── exception/            GlobalExceptionHandler and shared exceptions
 └── health/               /api/health
-src/main/resources/db/changelog   Liquibase master + changesets 001–008
 ```
+
+Liquibase: `backend/src/main/resources/db/changelog` (master + changesets 001–012).
 
 ## Documentation
 
@@ -178,6 +193,7 @@ src/main/resources/db/changelog   Liquibase master + changesets 001–008
 7. [Observability and operations](docs/design/07-observability-operations.md)
 8. [Configuration and deployment](docs/design/08-configuration-deployment.md)
 9. [Gaps and next actions](docs/design/09-gaps-and-next-actions.md): prioritized list of fixes found while documenting
+10. [Frontend](docs/design/10-frontend.md): web app decisions, token storage, folder structure, build plan
 
 **Runbook**
 

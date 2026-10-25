@@ -3,7 +3,7 @@
 ## Configuration today (Implemented)
 
 - `application.yml` reads all secrets from environment variables: `DB_*`, `JWT_SECRET`, `OTP_HMAC_SECRET`. No secrets are committed.
-- `scripts/run-local.sh` exports `.env` (gitignored) and runs Gradle.
+- `backend/scripts/run-local.sh` exports `backend/.env` (gitignored) and runs Gradle. Run it from `backend/`.
 - `OtpResendProperties` is a typed `@ConfigurationProperties` record. That is the pattern to copy for the remaining hard-coded values.
 - `JwtConfig` and `OtpConfig` **fail fast** at startup if a secret is shorter than 32 bytes. Configuration errors show up at deploy time, not on the first request.
 

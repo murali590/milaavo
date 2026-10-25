@@ -1,6 +1,6 @@
 # 2. Data model and persistence
 
-Source of truth: Liquibase changesets in `src/main/resources/db/changelog/changes/`. Hibernate runs with `ddl-auto: validate`, so the app refuses to start if entities and schema disagree.
+Source of truth: Liquibase changesets in `backend/src/main/resources/db/changelog/changes/`. Hibernate runs with `ddl-auto: validate`, so the app refuses to start if entities and schema disagree.
 
 ## Entity relationships
 
