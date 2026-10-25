@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -18,6 +19,8 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 @Configuration
 public class JwtConfig {
+
+    public static final String ISSUER = "milaavo";
 
     @Bean
     SecretKey jwtSecretKey(@Value("${app.jwt.secret}") String secret) {
@@ -38,8 +41,12 @@ public class JwtConfig {
 
     @Bean
     JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
-        return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+
+        // Checks expiry/not-before (as before) plus the issuer.
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(ISSUER));
+        return decoder;
     }
 }

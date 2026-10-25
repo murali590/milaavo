@@ -13,7 +13,7 @@
 - **Correlation id.** A servlet filter reads `X-Request-Id`, or generates one, puts it in the MDC, returns it as a response header, and adds it to `ApiErrorResponse`. Scheduled jobs set their own id per batch, and per message using the outbox id.
 - **Structured JSON logs.** Spring Boot has built-in structured logging (`logging.structured.format.console=ecs` or `logstash`), so fields can be searched.
 - **What to log for the outbox**: outbox id, attempt, transition (`PENDING→PROCESSING`), latency, error category. **Never** the message body, the OTP, or the full phone number. Mask it as `+91******0001`.
-- **Never log**: passwords, OTPs, tokens, `Authorization` headers, the HMAC/JWT secrets. Lower `org.springframework.security` from `TRACE` (G-12).
+- **Never log**: passwords, OTPs, tokens, `Authorization` headers, the HMAC/JWT secrets. Security logging is back at `INFO` (G-12 fixed).
 - `OtpSmsEventListener` logs an error without the exception. If the class is kept, pass `ex` to the logger. (It is dead code, G-10.)
 
 ## Metrics (Proposed: Actuator + Micrometer + Prometheus)

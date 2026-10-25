@@ -8,7 +8,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 
 | Id | Pri | Area | Gap | Fix |
 |---|---|---|---|---|
-| ~~G-01~~ | ✅ Done | OTP / SMS | ~~Plaintext OTP stored in `sms_outbox.message` and never removed~~ | **Fixed (25 Oct 2026):** AES-256-GCM via a reusable `common.security.crypto.AesGcmCipher` (random IV per message), wrapped by `SmsMessageCipher` with its own key `SMS_OUTBOX_ENCRYPTION_KEY`. Message redacted to `[redacted]` once SENT or FAILED. Changeset 012 redacted old plaintext rows. Tamper test gave `AEADBadTagException` as expected. **Open:** `failExpiredMessages` does not redact yet |
+| ~~G-01~~ | ✅ Done | OTP / SMS | ~~Plaintext OTP stored in `sms_outbox.message` and never removed~~ | **Fixed (25 Oct 2026):** AES-256-GCM via a reusable `common.security.crypto.AesGcmCipher` (random IV per message), wrapped by `SmsMessageCipher` with its own key `SMS_OUTBOX_ENCRYPTION_KEY`. Message redacted to `[redacted]` once SENT or FAILED. Changeset 012 redacted old plaintext rows. Tamper test gave `AEADBadTagException` as expected. `failExpiredMessages` redacts too |
 | G-28 | P2 | Outbox | All send errors are retried the same way, even permanent ones (decrypt failure, invalid number) | Classify errors as retryable or permanent; fail permanent ones immediately. Do it when adding a real SMS provider |
 | ~~G-06~~ | ✅ Done | Reports | ~~No `owner_id`. Any authenticated user can read, update or delete any report (BOLA)~~ | **Fixed (24 Oct 2026):** changeset 008 adds `owner_id`. `AuthUser` + `@CurrentUser` give the logged-in user to controllers. All report queries filter by owner, and other users' reports return 404 |
 | ~~G-02~~ | ✅ Done | Outbox | ~~`smsSender.send()` runs inside `@Transactional` `process()`~~ | **Fixed (24 Oct 2026):** `SmsOutboxProcessor` has no transaction. `SmsOutboxStateService` (separate bean) has short `loadForSending` / `markSent` / `recordFailure` transactions. Proved with `pg_stat_activity`: no more "idle in transaction" during a slow send |
@@ -21,8 +21,8 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-15 | P1 | Security | No per-IP, per-prefix or global limits on `register` and resend. SMS pumping risk | Rate limiter (Bucket4j / gateway), CAPTCHA after N attempts, prefix allow-list |
 | ~~G-17~~ | ✅ Done | Outbox | ~~Retries finish in ~30 s and ignore OTP expiry~~ | **Fixed (25 Oct 2026):** changeset 011 adds `expires_at` (set to the OTP expiry). Capped exponential backoff with jitter (`retry-base-delay` 5s, `retry-max-delay` 60s, validated at startup). Expired messages are never claimed or retried |
 | ~~G-11~~ | ✅ Done | API | ~~`CreateReportRequest` has no `@Size`. Over-length values → DB error → 500~~ | **Fixed (24 Oct 2026):** `@Size` on the request DTO: item name 200, description 2000, city 100 (same as the DB columns). Over-length now gives 400 `VALIDATION_ERROR`. Validation is on the DTO, not the entity, because entity checks run too late (at save) |
-| G-12 | P2 | Security | `org.springframework.security: TRACE` in the base config | `INFO` by default, `DEBUG` in `application-local.yml` |
-| G-13 | P2 | Security | JWT issuer not validated on decode | `JwtValidators.createDefaultWithIssuer("milaavo")` |
+| ~~G-12~~ | ✅ Done | Security | ~~`org.springframework.security: TRACE` in the base config~~ | **Fixed (25 Oct 2026):** removed; default `INFO`. Raise per run with `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG` |
+| ~~G-13~~ | ✅ Done | Security | ~~JWT issuer not validated on decode~~ | **Fixed (25 Oct 2026):** `JwtValidators.createDefaultWithIssuer(JwtConfig.ISSUER)`; `JwtService` uses the same constant. Hand-made wrong-issuer token → 401 |
 | G-14 | P2 | Data | Mobile number only trimmed. The same number in different formats becomes different accounts | Normalize to E.164 |
 | G-16 | P2 | Data | Outbox index does not match the claim query, no CHECK constraints, no retention | P-3, P-6, P-7 |
 | G-18 | P2 | Config | OTP validity, attempt limits, JWT TTL, outbox limits, lease are hard-coded | `@ConfigurationProperties` per module ([08](08-configuration-deployment.md)) |
@@ -34,7 +34,7 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 | G-23 | P2 | Ops | No correlation id, metrics, Actuator or readiness | [07](07-observability-operations.md) |
 | G-24 | P2 | Code | `UserAlreayActiveException` typo. `ResentVerificationOTP*` DTO names. Field injection in the report module | Rename to `UserAlreadyActiveException` / `ResendVerificationOtp*`, use constructor injection |
 | G-25 | P2 | Tests | Only report tests exist. OTP, auth and outbox flows have none. `contextLoads` needs a real DB and env. `application.yml` has `${SPRING_PROFILES_ACTIVE}` with no default, so tests fail unless the variable is set | Dedicated test session: Testcontainers, OTP concurrency tests, outbox scenarios ([05](05-sms-outbox.md#verification-scenarios)). Default the profile to `local` |
-| G-26 | P2 | Perf | `spring.jpa.open-in-view` is on by default (startup warning): a DB connection stays open for the whole HTTP request, not just the service call | `spring.jpa.open-in-view: false` |
+| ~~G-26~~ | ✅ Done | Perf | ~~`spring.jpa.open-in-view` is on by default: a DB connection stays open for the whole HTTP request~~ | **Fixed (25 Oct 2026):** `spring.jpa.open-in-view: false`. Safe because controllers return DTOs only |
 | G-27 | P1 | Security | No CORS configuration. A browser front end on another origin (for example the React dev server) will be blocked | Explicit allow-list of front-end origins in `SecurityConfig`. Needed before the frontend |
 
 ## Status of the original design document's next actions

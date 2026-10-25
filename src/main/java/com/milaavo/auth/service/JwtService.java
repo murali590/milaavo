@@ -12,6 +12,8 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.stereotype.Service;
 
+import com.milaavo.config.JwtConfig;
+
 @Service
 public class JwtService {
 
@@ -27,7 +29,7 @@ public class JwtService {
         Instant now = Instant.now();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("milaavo")
+                .issuer(JwtConfig.ISSUER)
                 .subject(userId.toString())
                 .issuedAt(now)
                 .expiresAt(now.plus(EXPIRY_MINUTES, ChronoUnit.MINUTES))

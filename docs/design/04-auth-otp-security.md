@@ -105,12 +105,12 @@ Concurrency: two requests with the same correct OTP both reach `FOR UPDATE`. The
 | Key | `JWT_SECRET`, Base64, ≥ 32 bytes, checked at startup |
 | Claims | `iss=milaavo`, `sub=<userId>`, `iat`, `exp` |
 | Lifetime | 15 minutes, no refresh token |
-| Validation | Signature and `exp`/`nbf` (Spring default timestamp validator, 60 s clock skew) |
+| Validation | Signature, `exp`/`nbf` (60 s clock skew) and **issuer** `iss = milaavo` (G-13, `JwtValidators.createDefaultWithIssuer(JwtConfig.ISSUER)`) |
 | Session | `STATELESS`, CSRF disabled (correct for bearer tokens sent in a header, not cookies) |
 
 Gaps and proposals:
 
-- **G-13: issuer not validated.** The decoder does not check `iss`. Add `JwtValidators.createDefaultWithIssuer("milaavo")`, and an `aud` claim if more than one service ever shares a key.
+- ✅ **Issuer validated (G-13, fixed 25 Oct 2026).** A token signed with our key but with another `iss` now gets 401. This prevents token confusion if the key is ever used for other token types. Tested with a hand-made token: `iss: someone-else` → 401, `iss: milaavo` → 200. Add an `aud` claim if more than one service ever shares a key.
 - **No revocation.** Logout, password change or a disabled account do not invalidate issued tokens for up to 15 minutes. That is acceptable at this lifetime. If it ever matters: add a `token_version` on the user and put it in a claim, or keep a short deny-list.
 - **No authorities.** Every authenticated user has the same rights. Add roles (`ROLE_USER`, `ROLE_ADMIN`) when admin features appear.
 - **Refresh tokens** (Proposed, only if the product needs long sessions): opaque, stored hashed, rotated on every use, with reuse detection that revokes the whole token family.
@@ -152,7 +152,7 @@ It is wired in `SecurityConfig` with `.jwt(jwt -> jwt.jwtAuthenticationConverter
 |---|---|
 | Secrets in env vars, `.env` gitignored | Implemented |
 | Separate keys for JWT and OTP HMAC | Implemented (two variables). Document that they must differ |
-| Security logging at `TRACE` (G-12) | Gap. It logs full filter-chain detail, including headers. Use `INFO` by default and `DEBUG` locally when needed |
+| Security logging (G-12) | Fixed: default `INFO`. For one debugging run use `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG` |
 | CORS | Not configured. Fine for non-browser clients. Add an explicit allow-list before a web front end |
 | Security headers | Spring Security defaults (HSTS on HTTPS, `X-Content-Type-Options`, frame options) |
 | TLS | Expected to terminate at the load balancer or ingress (Proposed, [08](08-configuration-deployment.md)) |
