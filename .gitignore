@@ -8,3 +8,6 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Build tool caches an IDE may create at the repo root
+.gradle/
