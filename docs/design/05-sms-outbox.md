@@ -75,7 +75,7 @@ Plus up to 5 s of poll delay per hop. There is no jitter.
 |---|---|---|---|---|
 | F1 | Provider is slow | DB connection and transaction stay open for the whole send. 50 slow sends in sequence block the single scheduler thread | Pool pressure. Recovery also waits, because it shares the scheduler thread | G-02, G-21 |
 | F2 | Send succeeds, then the commit fails or the app crashes | TX3 rolls back, so the row stays `PROCESSING` (TX2 committed it), with no attempt counted | Recovered after 2 min and **sent again** | G-02 |
-| F3 | Send takes more than 2 min (or the instance freezes during a GC pause) | Another instance's recovery resets the row, and worker B claims and sends it. Worker A then finishes and overwrites B's state with its own stale entity | Duplicate SMS, and a lost update on the row | G-03, G-04 |
+| F3 | Send takes longer than the lease (or the instance freezes during a GC pause) | **Fixed for state (G-03, G-04):** each claim gets a new `claim_token`; outcome updates lock the row and require the token, so A's late update matches nothing and logs "Lease lost". Verified with two instances on 25 Oct 2026 | Duplicate SMS still possible (at-least-once), but no lost update | ~~G-03~~ ✅ ~~G-04~~ ✅ |
 | F4 | Message reliably crashes the processor (poison message) | **Fixed (G-05):** the attempt is counted at claim, and recovery fails the row at the limit | Stops after 5 attempts | ~~G-05~~ ✅ |
 | F5 | Provider outage longer than ~30 s | All messages reach `FAILED` quickly | Lost OTPs until users resend | G-17 |
 | F6 | Retries continue past OTP expiry | A message retried at minute 4 delivers a code that expires seconds later | Wasted SMS cost, confused users | G-17 |

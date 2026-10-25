@@ -6,7 +6,7 @@ Use this when OTP SMS are late, missing, duplicated, or the `sms_outbox` table l
 
 ## How it works, in one paragraph
 
-`OtpServiceImpl.issueOtp` inserts a `PENDING` row in the same transaction that creates the OTP challenge. Every `app.sms-outbox.poll-delay-ms` (5 s), `SmsOutboxWorker` claims up to 50 due rows with `FOR UPDATE SKIP LOCKED`, marks them `PROCESSING` and commits. It then calls `SmsOutboxProcessor.process(id)` for each one, which sends the SMS **inside a transaction** and writes `SENT`, `PENDING` (retry after 2/4/8/16 s) or `FAILED` (after 5 attempts). Every `app.sms-outbox.recovery-delay-ms` (30 s), rows stuck in `PROCESSING` for more than 2 minutes are reset to `PENDING`.
+`OtpServiceImpl.issueOtp` inserts a `PENDING` row in the same transaction that creates the OTP challenge. Every `app.sms-outbox.poll-delay-ms` (5 s), `SmsOutboxWorker` claims up to 50 due rows with `FOR UPDATE SKIP LOCKED`, marks them `PROCESSING` and commits. It then calls `SmsOutboxProcessor.process(id)` for each one, which sends the SMS **inside a transaction** and writes `SENT`, `PENDING` (retry after 2/4/8/16 s) or `FAILED` (after 5 attempts). Every `app.sms-outbox.recovery-delay-ms` (30 s), rows stuck in `PROCESSING` for longer than the lease (`app.sms-outbox.lease`, default 2 min) are reset to `PENDING` (or `FAILED` if they used all 5 attempts), and their `claim_token` is cleared.
 
 ## Status meanings
 
@@ -89,7 +89,7 @@ WHERE l.relation = 'sms_outbox'::regclass;
 Expected under the current design in two cases (see [05-sms-outbox.md](../design/05-sms-outbox.md#failure-modes)):
 
 - The send succeeded but the transaction writing `SENT` failed or the app crashed. Recovery re-queues the row after 2 minutes.
-- A send took longer than 2 minutes. Recovery reset the row while the first send was still running.
+- A send took longer than the lease (`app.sms-outbox.lease`, default 2 min). Recovery reset the row while the first send was still running. Look for `Lease lost for SMS outbox ID …` in the logs: the slow worker's late result was correctly ignored. If this happens often, the provider is slower than the lease allows, so raise the lease or lower the provider timeout.
 
 Both are at-least-once delivery. For an OTP the second copy is harmless if it carries the same code. Track how often it happens.
 

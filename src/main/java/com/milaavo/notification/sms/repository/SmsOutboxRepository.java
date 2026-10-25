@@ -13,14 +13,12 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface SmsOutboxRepository
                 extends JpaRepository<SmsOutbox, UUID> {
 
-        List<SmsOutbox> findTop50ByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(
-                        SmsOutboxStatus status,
-                        Instant now);
 
         @Query(value = """
                         SELECT *
@@ -41,6 +39,7 @@ public interface SmsOutboxRepository
                                 ELSE 'PENDING'
                             END,
                             next_attempt_at = CURRENT_TIMESTAMP,
+                            claim_token = NULL,
                             processing_started_at = NULL,
                             last_error = 'Recovered stale processing message'
                         WHERE status = 'PROCESSING'
@@ -49,4 +48,8 @@ public interface SmsOutboxRepository
         int recoverStaleProcessingMessages(
                         @Param("cutoff") Instant cutoff,
                         @Param("maxAttempts") int maxAttempts);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        Optional<SmsOutbox> findByIdAndClaimTokenAndStatus(
+                        UUID id, UUID claimToken, SmsOutboxStatus status);
 }

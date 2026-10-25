@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.milaavo.notification.sms.dto.ClaimedMessage;
+
 import java.util.UUID;
 
 @Component
@@ -18,14 +20,11 @@ public class SmsOutboxWorker {
 
     @Scheduled(fixedDelayString = "${app.sms-outbox.poll-delay-ms:5000}")
     public void processPendingMessages() {
-        for (UUID messageId : claimService.claimPendingMessages()) {
+        for (ClaimedMessage claimed : claimService.claimPendingMessages()) {
             try {
-                processor.process(messageId);
+                processor.process(claimed);
             } catch (Exception ex) {
-                log.error(
-                        "Unexpected error processing SMS outbox message {}",
-                        messageId,
-                        ex);
+                log.error("Unexpected error processing SMS outbox message {}", claimed.messageId(), ex);
             }
         }
     }

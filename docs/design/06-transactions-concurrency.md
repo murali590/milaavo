@@ -67,7 +67,7 @@ In `SmsOutboxClaimService`, the rows returned by the native query are managed en
 | Double OTP verification | `verify` | Pessimistic lock + `consumed_at` check | Conditional update: `UPDATE … SET consumed_at=now WHERE id=? AND consumed_at IS NULL`, then check the row count |
 | Resend rate-limit race | `resendVerificationOtp` | Lock the parent user row to serialize | Advisory lock, or a unique `(user_id, time_bucket)` |
 | Queue claiming | outbox claim | `FOR UPDATE SKIP LOCKED` | Broker with visibility timeouts (SQS), or Kafka partitions |
-| Stale worker overwrite | outbox outcome | **None** (G-03) | Claim token or `@Version` compare-and-set |
+| Stale worker overwrite | outbox outcome | **Implemented (G-03):** claim token per claim + `SELECT … FOR UPDATE` on `(id, claim_token, status = PROCESSING)` before writing the result | `@Version` optimistic locking (native recovery query would need to bump the version too) |
 | Concurrent report edits | `updateReport` | **None**, last write wins | `@Version` on `LostReport` → 409 on conflict (P-2) |
 
 ### Pessimistic or optimistic locking?

@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.milaavo.notification.sms.config.SmsOutboxProperties;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -15,10 +15,11 @@ import java.time.temporal.ChronoUnit;
 public class SmsOutboxRecoveryService {
 
     private final SmsOutboxRepository smsOutboxRepository;
+    private final SmsOutboxProperties properties;
 
     @Transactional
     public void recoverStaleMessages() {
-        Instant cutoff = Instant.now().minus(2, ChronoUnit.MINUTES);
+        Instant cutoff = Instant.now().minus(properties.lease());
 
         int recovered =
                 smsOutboxRepository.recoverStaleProcessingMessages(cutoff, SmsOutboxStateService.MAX_ATTEMPTS);

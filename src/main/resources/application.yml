@@ -36,3 +36,4 @@ app:
   sms-outbox:
     poll-delay-ms: 5000
     recovery-delay-ms: 30000
+    lease: ${SMS_OUTBOX_LEASE:2m}

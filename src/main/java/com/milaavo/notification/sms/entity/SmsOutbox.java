@@ -55,4 +55,7 @@ public class SmsOutbox {
     @Column(name = "processing_started_at")
     private Instant processingStartedAt;
 
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
 }

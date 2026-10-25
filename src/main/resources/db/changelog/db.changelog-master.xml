@@ -22,5 +22,7 @@
          relativeToChangelogFile="true"/>
     <include file="changes/009-add-otp-challenge-superseded-at.xml"
         relativeToChangelogFile="true"/>
+    <include file="changes/010-add-sms-outbox-claim-token.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
