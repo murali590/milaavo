@@ -24,6 +24,7 @@
   /* Status */
   --danger: #dc2626;
   --danger-soft: #fef2f2;
+  --on-danger: #ffffff;
   --success: #047857;
   --success-soft: #ecfdf5;
   --warning: #b45309;
@@ -52,6 +53,7 @@
 
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-on-danger: var(--on-danger);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
