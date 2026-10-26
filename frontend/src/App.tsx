@@ -1,5 +1,5 @@
-import { ThemePreview } from './shared/ui/ThemePreview'
+import { ApiPlayground } from './ApiPlayground'
 
 export default function App() {
-  return <ThemePreview />
+  return <ApiPlayground />
 }
