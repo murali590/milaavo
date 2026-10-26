@@ -14,9 +14,32 @@ One responsive web app that works well in phone browsers. No native apps (see [v
 | UI library | React | Existing strength; the largest ecosystem |
 | Styling | Tailwind CSS | Mobile-first utility classes (`md:`, `lg:` for bigger screens), no separate CSS files to keep in sync |
 | Routing | React Router | Pages and protected routes |
+| HTTP client | axios | Interceptors for the token and for 401, a base URL and timeout in one place, and errors for every non-2xx response |
 | Server data | TanStack Query | Caching, loading and error states, retries, and refetch after changes. Avoids hand-written `useEffect` fetching everywhere |
 | Forms | react-hook-form + zod | Form state without re-render storms; zod rules mirror the backend limits (item name 200, city 100, description 2000, password 12–72) |
 | API address | `VITE_API_BASE_URL` (dev: `http://localhost:8091`) | Calls go cross-origin on purpose, so the CORS allow-list (G-27) is exercised from day one. In production the value changes, not the code |
+
+## UI theme
+
+*Decided 26 Oct 2026.* Tokens live in `frontend/src/index.css`.
+
+| Choice | Value | Why |
+|---|---|---|
+| Brand colour | Teal. Buttons and links use **teal-700 `#0f766e`** (hover teal-800 `#115e59`); soft highlight teal-50 | Calm and trustworthy, and different from the usual blue apps. Teal-600 with white text is only 3.7:1 contrast, below WCAG AA (4.5:1); teal-700 is 5.5:1 |
+| Lost / found | Lost = amber (`#b45309` on `#fffbeb`), found = emerald (`#047857` on `#ecfdf5`) | Instantly tells the two report types apart. Both pairs pass AA |
+| Status | Danger red-600, success emerald-700, warning amber-700, each with a soft background | Standard meanings |
+| Neutrals | Page slate-50, cards white, borders slate-200, text slate-900, muted text slate-500 (4.8:1) | Quiet background so the brand colour stands out |
+| Font | Inter (variable), self-hosted with `@fontsource-variable/inter` | Very readable on phones. Self-hosting means no request to Google, works offline, and no tracking |
+| Dark mode | Not yet, but **dark-ready** | Components use semantic tokens (`bg-surface`, `text-ink`), never raw colours. Dark mode later = new token values only |
+
+### Rules for every component
+
+1. **Use tokens, never raw colours.** Write `bg-brand`, `text-ink-muted`, `border-line`, not `bg-teal-700` or `text-slate-500`.
+2. **Mobile first.** Base classes are for phones; add `sm:`/`md:` for bigger screens.
+3. **Tap targets at least 44 px high** (`h-11`) for buttons and inputs.
+4. **Visible keyboard focus** on everything clickable (a global `:focus-visible` outline).
+5. **Text contrast at least 4.5:1** (WCAG AA). Check before adding a new colour.
+6. **One radius for cards** (`rounded-card`, 1 rem) and the default spacing scale (`p-4`, `gap-3`…).
 
 ## Login token in the browser
 
@@ -76,7 +99,8 @@ frontend/
 | Step | What | Learning focus |
 |---|---|---|
 | **F1** | Create the project: Vite + React + TS + Tailwind, `VITE_API_BASE_URL`, a health-check page | Tooling, env vars, a real CORS call from the browser |
-| F2 | API client: `fetch` wrapper, `ApiError`, attach the token | One place for HTTP and errors |
+| F1.5 | UI theme: colour tokens, Inter font, base styles | Design tokens, contrast, dark-ready CSS |
+| F2 | API client on axios: instance, interceptors, `ApiError`, attach the token | One place for HTTP and errors |
 | F3 | Routing, layout, auth state in memory, protected routes | Context, route guards |
 | F4 | Register → verify OTP → resend (countdown, error codes) | Forms, validation, UX for error codes |
 | F5 | Login, logout, handle 401 | Session flow |

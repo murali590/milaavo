@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens. Components use the Tailwind classes these create
+ * (bg-brand, text-ink, border-line ...), never raw colours like bg-teal-700.
+ * Dark mode later = new values for these variables only.
+ */
+:root {
+  /* Brand: teal-700 has 5.5:1 contrast with white text (teal-600 is only 3.7:1) */
+  --brand: #0f766e;
+  --brand-hover: #115e59;
+  --brand-soft: #f0fdfa;
+  --on-brand: #ffffff;
+
+  /* Surfaces, text and lines */
+  --page: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --line: #e2e8f0;
+  --ink: #0f172a;
+  --ink-muted: #64748b;
+  --focus: #14b8a6;
+
+  /* Status */
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+
+  /* Milaavo report types */
+  --lost: #b45309;
+  --lost-soft: #fffbeb;
+  --found: #047857;
+  --found-soft: #ecfdf5;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-focus: var(--focus);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-lost: var(--lost);
+  --color-lost-soft: var(--lost-soft);
+  --color-found: var(--found);
+  --color-found-soft: var(--found-soft);
+
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-page text-ink font-sans antialiased;
+  }
+
+  /* Visible focus for keyboard users on everything clickable */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
