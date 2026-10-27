@@ -5,6 +5,7 @@ import { HomeRedirect, RedirectIfAuthenticated, RequireAuth } from '../features/
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ReportsPage } from '../features/reports/pages/ReportsPage'
+import { VerifyMobilePage } from '../features/auth/pages/VerifyMobilePage'
 
 export const router = createBrowserRouter([
   {
@@ -16,13 +17,14 @@ export const router = createBrowserRouter([
         children: [
           { path: 'login', element: <LoginPage /> },
           { path: 'register', element: <RegisterPage /> },
+          { path: 'verify-mobile', element: <VerifyMobilePage /> }
         ],
       },
       {
         element: <RequireAuth />,
         children: [{ path: 'reports', element: <ReportsPage /> }],
       },
-      { path: '*', element: <NotFoundPage /> },
+      { path: '*', element: <NotFoundPage /> }
     ],
   },
 ])
