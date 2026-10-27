@@ -1,5 +1,6 @@
-import { ApiPlayground } from './ApiPlayground'
+import { RouterProvider } from 'react-router/dom'
+import { router } from './app/router'
 
 export default function App() {
-  return <ApiPlayground />
+  return <RouterProvider router={router} />
 }
