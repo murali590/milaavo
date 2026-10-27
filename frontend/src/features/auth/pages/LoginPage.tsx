@@ -6,7 +6,8 @@ export function LoginPage() {
   const { endReason, signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/reports'
+  const navState = location.state as { from?: string; verifiedMobile?: string } | null
+  const from = navState?.from ?? '/reports'
 
   // TEMP (F3 only): pretend to log in with a fake token, to test the guards and the 401 flow.
   function simulateSignIn() {
@@ -26,6 +27,12 @@ export function LoginPage() {
   return (
     <Card className="mx-auto max-w-sm space-y-4">
       <h1 className="text-xl font-semibold">Log in</h1>
+
+      {navState?.verifiedMobile && (
+        <Alert tone="success">
+          {navState.verifiedMobile} is verified. Please log in.
+        </Alert>
+      )}
 
       {endReason === 'expired' && (
         <Alert tone="warning">Your session has expired. Please log in again.</Alert>

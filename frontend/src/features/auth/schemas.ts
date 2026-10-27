@@ -29,3 +29,9 @@ export const registerSchema = z
   })
 
 export type RegisterFormValues = z.infer<typeof registerSchema>
+
+export const otpSchema = z.object({
+  otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit OTP'),
+})
+
+export type OtpFormValues = z.infer<typeof otpSchema>
