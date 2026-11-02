@@ -18,7 +18,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import com.milaavo.auth.exception.UserAlreayActiveException;
+import com.milaavo.auth.exception.AccountDisabledException;
 import com.milaavo.auth.exception.InvalidVerificationRequestException;
+import com.milaavo.auth.exception.MobileNotVerifiedException;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -219,6 +221,30 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(response);
+        }
+
+        @ExceptionHandler(MobileNotVerifiedException.class)
+        public ResponseEntity<ApiErrorResponse> handleMobileNotVerified(
+                        MobileNotVerifiedException ex) {
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.FORBIDDEN.value(),
+                                "MOBILE_NOT_VERIFIED",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        @ExceptionHandler(AccountDisabledException.class)
+        public ResponseEntity<ApiErrorResponse> handleAccountDisabled(
+                        AccountDisabledException ex) {
+                ApiErrorResponse response = new ApiErrorResponse(
+                                HttpStatus.FORBIDDEN.value(),
+                                "ACCOUNT_DISABLED",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
 
         // Spring's own client errors (404, 405, 415, ...) already carry the right

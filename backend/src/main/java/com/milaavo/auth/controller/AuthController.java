@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.milaavo.auth.dto.ResentVerificationOTPRequest;
 import com.milaavo.auth.dto.ResentVerificationOTPResponse;
+import com.milaavo.auth.dto.StartVerificationRequest;
+import com.milaavo.auth.dto.StartVerificationResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -55,5 +57,12 @@ public class AuthController {
 
         ResentVerificationOTPResponse response = userService.resendVerificationOtp(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify/start")
+    public ResponseEntity<StartVerificationResponse> startVerification(
+            @Valid @RequestBody StartVerificationRequest request) {
+
+        return ResponseEntity.ok(userService.startVerification(request));
     }
 }

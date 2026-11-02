@@ -33,7 +33,11 @@ import com.milaavo.otp.service.OtpService;
 
 import com.milaavo.auth.dto.ResentVerificationOTPRequest;
 import com.milaavo.auth.dto.ResentVerificationOTPResponse;
+import com.milaavo.auth.dto.StartVerificationRequest;
+import com.milaavo.auth.dto.StartVerificationResponse;
+import com.milaavo.auth.exception.AccountDisabledException;
 import com.milaavo.auth.exception.InvalidVerificationRequestException;
+import com.milaavo.auth.exception.MobileNotVerifiedException;
 import com.milaavo.auth.exception.UserAlreayActiveException;
 import com.milaavo.otp.exception.OtpResendRateLimitException;
 
@@ -108,10 +112,15 @@ public class UserServiceImpl implements UserService {
                                         "Invalid mobile number or password");
                 }
 
-                if (user.getStatus() != UserStatus.ACTIVE
-                                || !user.isMobileVerified()) {
-                        throw new AccessDeniedException(
-                                        "Account is not active or mobile is not verified");
+                // Checked only after the password, so only the account owner learns the account
+                // state.
+                if (user.getStatus() == UserStatus.DISABLED) {
+                        throw new AccountDisabledException("This account has been disabled");
+                }
+
+                if (user.getStatus() != UserStatus.ACTIVE || !user.isMobileVerified()) {
+                        throw new MobileNotVerifiedException(
+                                        "Please verify your mobile number to log in");
                 }
 
                 return LoginResponse.builder()
@@ -158,6 +167,46 @@ public class UserServiceImpl implements UserService {
                                 .orElseThrow(() -> new InvalidVerificationRequestException(
                                                 "Invalid verification request"));
 
+                UUID challengeId = issueVerificationOtp(user);
+
+                return ResentVerificationOTPResponse.builder()
+                                .challengeId(challengeId)
+                                .build();
+        }
+
+        @Override
+        @Transactional
+        public StartVerificationResponse startVerification(StartVerificationRequest request) {
+                String mobileNumber = request.getMobileNumber().trim();
+
+                // Same answer for unknown number and wrong password: no hint about which
+                // numbers exist.
+                User candidate = userRepository.findByMobileNumber(mobileNumber)
+                                .orElseThrow(() -> new BadCredentialsException(
+                                                "Invalid mobile number or password"));
+
+                // BCrypt is slow (~250 ms), so check it before taking the row lock.
+                if (!passwordEncoder.matches(request.getPassword(), candidate.getPasswordHash())) {
+                        throw new BadCredentialsException("Invalid mobile number or password");
+                }
+
+                User user = userRepository.findByIdForUpdate(candidate.getId())
+                                .orElseThrow(() -> new BadCredentialsException(
+                                                "Invalid mobile number or password"));
+
+                UUID challengeId = issueVerificationOtp(user);
+
+                return StartVerificationResponse.builder()
+                                .userId(user.getId())
+                                .challengeId(challengeId)
+                                .mobileNumber(user.getMobileNumber())
+                                .build();
+        }
+
+        // Shared by resend and start: the caller must have locked the user row
+        // (findByIdForUpdate),
+        // so two parallel requests can't both pass the cooldown and window checks.
+        private UUID issueVerificationOtp(User user) {
                 if (user.isMobileVerified()
                                 || user.getStatus() != UserStatus.PENDING_VERIFICATION) {
                         throw new UserAlreayActiveException(
@@ -191,14 +240,10 @@ public class UserServiceImpl implements UserService {
                 attempt.setRequestedAt(now);
                 otpResendAttemptRepository.save(attempt);
 
-                UUID challengeId = otpService.issueOtp(
+                return otpService.issueOtp(
                                 user.getId(),
                                 OtpPurpose.MOBILE_VERIFICATION,
                                 user.getMobileNumber());
-
-                return ResentVerificationOTPResponse.builder()
-                                .challengeId(challengeId)
-                                .build();
         }
 
         private boolean isMobileNumberConflict(DataIntegrityViolationException ex) {

@@ -44,7 +44,8 @@ public class SecurityConfig {
                                                                 "/api/auth/register",
                                                                 "/api/auth/login",
                                                                 "/api/auth/verify-mobile",
-                                                                "/api/auth/verify/resend-otp")
+                                                                "/api/auth/verify/resend-otp",
+                                                                "/api/auth/verify/start")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2
