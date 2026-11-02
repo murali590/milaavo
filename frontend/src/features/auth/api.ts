@@ -4,6 +4,9 @@ import type {
   RegisterResponse,
   ResendOtpResponse,
   VerifyMobileRequest,
+  LoginRequest,
+  LoginResponse,
+  VerifyMobileState,
 } from './types'
 
 export async function registerUser(body: RegisterRequest): Promise<RegisterResponse> {
@@ -17,5 +20,16 @@ export async function verifyMobile(body: VerifyMobileRequest): Promise<void> {
 
 export async function resendVerificationOtp(userId: string): Promise<ResendOtpResponse> {
   const { data } = await http.post<ResendOtpResponse>('/api/auth/verify/resend-otp', { userId })
+  return data
+}
+
+export async function login(body: LoginRequest): Promise<LoginResponse> {
+  const { data } = await http.post<LoginResponse>('/api/auth/login', body)
+  return data
+}
+
+// The response has exactly what the OTP page needs: userId, challengeId and mobileNumber.
+export async function startVerification(body: LoginRequest): Promise<VerifyMobileState> {
+  const { data } = await http.post<VerifyMobileState>('/api/auth/verify/start', body)
   return data
 }

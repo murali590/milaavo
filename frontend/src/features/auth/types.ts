@@ -59,3 +59,8 @@ export type VerifyMobileState = {
 
 // Why the last session ended, so the login page can explain it.
 export type SignOutReason = 'manual' | 'expired'
+
+export type LoginRequest = {
+  mobileNumber: string
+  password: string
+}

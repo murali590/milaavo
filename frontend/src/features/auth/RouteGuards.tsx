@@ -13,11 +13,15 @@ export function RequireAuth() {
 }
 
 // Login and register pages: a logged-in user has no reason to see them.
+// Login and register pages: a logged-in user has no reason to see them.
+// This is also what redirects after login, back to the page the user wanted.
 export function RedirectIfAuthenticated() {
   const { isAuthenticated } = useAuth()
+  const location = useLocation()
 
   if (isAuthenticated) {
-    return <Navigate to="/reports" replace />
+    const from = (location.state as { from?: string } | null)?.from ?? '/reports'
+    return <Navigate to={from} replace />
   }
   return <Outlet />
 }

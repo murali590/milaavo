@@ -35,3 +35,14 @@ export const otpSchema = z.object({
 })
 
 export type OtpFormValues = z.infer<typeof otpSchema>
+
+export const loginSchema = z.object({
+  mobileNumber: z
+    .string()
+    .trim()
+    .min(1, 'Mobile number is required')
+    .refine((value) => normalizeIndianMobile(value) !== null, 'Enter a valid 10-digit Indian mobile number'),
+  password: z.string().min(1, 'Password is required'),
+})
+
+export type LoginFormValues = z.infer<typeof loginSchema>
