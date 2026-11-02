@@ -71,6 +71,16 @@ Concurrency: two requests with the same correct OTP both reach `FOR UPDATE`. The
 4. Window: `COUNT(requested_at > now − 15 min) ≥ 3` → 429.
 5. Insert a resend attempt, then issue a new OTP (which supersedes the old one).
 
+### Restart verification (`UserServiceImpl.startVerification`, G-30)
+
+For a user who registered but left before entering the OTP. Login returns 403 `MOBILE_NOT_VERIFIED`, and then:
+
+1. Load the user **without a lock** and check the password. An unknown number and a wrong password give the same 401.
+2. Lock the user row, so the rate-limit check is safe.
+3. Run the same code as resend (`issueVerificationOtp`): reject if already active, apply the cooldown and window limits, record an attempt, issue a new OTP.
+
+The password requirement stops anyone from triggering SMS to another person's number.
+
 ### OTP security properties
 
 | Property | Status | How |

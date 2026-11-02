@@ -30,7 +30,9 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 | `INVALID_VERIFICATION_REQUEST` | 400 | Verify or resend with a `userId` that doesn't exist |
 | `UNAUTHORIZED` | 401 | No token, or an invalid or expired token |
 | `INVALID_CREDENTIALS` | 401 | Login with an unknown mobile number or a wrong password (same message for both) |
-| `FORBIDDEN` | 403 | Login before verification, or a security access denial |
+| `FORBIDDEN` | 403 | A security access denial |
+| `MOBILE_NOT_VERIFIED` | 403 | Login with the correct password, but the mobile isn't verified yet. Client should call `POST /api/auth/verify/start` |
+| `ACCOUNT_DISABLED` | 403 | Login with the correct password, but the account is disabled |
 | `REPORT_NOT_FOUND` | 404 | Report id does not exist |
 | `MOBILE_NUMBER_ALREADY_REGISTERED` | 409 | Register with an existing number |
 | `USER_ALREADY_ACTIVE` | 409 | Verify or resend for an already-verified user |
@@ -85,6 +87,24 @@ Limits (configurable): at least 60 s since the last resend, and at most 3 resend
 
 Errors: 400 `INVALID_VERIFICATION_REQUEST` for an unknown `userId`, 409 `USER_ALREADY_ACTIVE`, 429 `TOO_MANY_REQUESTS`.
 
+### `POST /api/auth/verify/start` → 200
+
+For a user who registered but never finished verifying, and so has no `userId` or `challengeId`.
+
+```json
+{ "mobileNumber": "+919876543210", "password": "…" }
+```
+
+Response:
+
+```json
+{ "userId": "…", "challengeId": "…", "mobileNumber": "+919876543210" }
+```
+
+Sends a new OTP. It requires the password, so nobody can trigger SMS to another person's number. It shares the cooldown and window limits with resend.
+
+Errors: 401 `INVALID_CREDENTIALS` (the same for an unknown number and a wrong password), 409 `USER_ALREADY_ACTIVE`, 429 `TOO_MANY_REQUESTS`.
+
 ### `POST /api/auth/login` → 200
 
 ```json
@@ -103,7 +123,7 @@ Response:
 
 The password is checked **before** the account status, so the 403 for an unverified account is only returned to someone who knows the password.
 
-Errors: 401 `INVALID_CREDENTIALS`, 403 `FORBIDDEN` (not active or not verified).
+Errors: 401 `INVALID_CREDENTIALS`, 403 `MOBILE_NOT_VERIFIED`, 403 `ACCOUNT_DISABLED`.
 
 ## Report endpoints (Bearer token required)
 

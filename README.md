@@ -121,6 +121,7 @@ Full contract, status codes and error codes: [docs/design/03-api.md](docs/design
 | POST | `/api/auth/register` | public | Create user (`PENDING_VERIFICATION`) and send OTP |
 | POST | `/api/auth/verify-mobile` | public | Verify OTP, activate the user |
 | POST | `/api/auth/verify/resend-otp` | public | Issue a new OTP (cooldown and window limits) |
+| POST | `/api/auth/verify/start` | public | Restart verification with mobile and password, for users who never finished it |
 | POST | `/api/auth/login` | public | Exchange mobile and password for a JWT |
 | POST | `/api/reports` | Bearer | Create a lost-item report |
 | GET | `/api/reports?page=&size=` | Bearer | My reports, paged, newest first |
