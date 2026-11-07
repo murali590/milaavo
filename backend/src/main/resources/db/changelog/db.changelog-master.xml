@@ -28,5 +28,7 @@
         relativeToChangelogFile="true"/>
     <include file="changes/012-redact-existing-sms-outbox-messages.xml"
         relativeToChangelogFile="true"/>
+    <include file="changes/013-rename-to-item-report-add-type.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

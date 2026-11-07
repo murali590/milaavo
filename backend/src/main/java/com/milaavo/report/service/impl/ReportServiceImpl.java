@@ -5,7 +5,8 @@ import com.milaavo.exception.ReportNotFoundException;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
 import com.milaavo.report.dto.PagedResponse;
-import com.milaavo.report.entity.LostReport;
+import com.milaavo.report.entity.ItemReport;
+import com.milaavo.report.enums.ReportType;
 import com.milaavo.report.repository.ReportRepository;
 import com.milaavo.report.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +29,12 @@ class ReportServiceImpl implements ReportService {
     @Transactional
     public CreateReportResponse createReport(AuthUser currentUser, CreateReportRequest request) {
 
-        LostReport lostReport = new LostReport();
+        ItemReport lostReport = new ItemReport();
         lostReport.setOwnerId(currentUser.userId());
         lostReport.setItemName(request.getItemName());
         lostReport.setDescription(request.getDescription());
         lostReport.setCity(request.getCity());
+        lostReport.setType(request.getType());
         lostReport.setStatus("REPORTED");
 
         return toResponse(reportRepository.saveAndFlush(lostReport));
@@ -40,20 +42,22 @@ class ReportServiceImpl implements ReportService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<CreateReportResponse> getAllReports(AuthUser currentUser, int page, int size) {
+    public PagedResponse<CreateReportResponse> getAllReports(AuthUser currentUser, ReportType type, int page,
+            int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<LostReport> lostReports =
-                reportRepository.findByOwnerId(currentUser.userId(), pageable);
+        Page<ItemReport> reports = type == null
+                ? reportRepository.findByOwnerId(currentUser.userId(), pageable)
+                : reportRepository.findByOwnerIdAndType(currentUser.userId(), type, pageable);
 
         return new PagedResponse<>(
-                lostReports.getContent().stream().map(this::toResponse).toList(),
-                lostReports.getNumber(),
-                lostReports.getSize(),
-                lostReports.getTotalElements(),
-                lostReports.getTotalPages(),
-                lostReports.isFirst(),
-                lostReports.isLast());
+                reports.getContent().stream().map(this::toResponse).toList(),
+                reports.getNumber(),
+                reports.getSize(),
+                reports.getTotalElements(),
+                reports.getTotalPages(),
+                reports.isFirst(),
+                reports.isLast());
     }
 
     @Override
@@ -66,10 +70,11 @@ class ReportServiceImpl implements ReportService {
     @Transactional
     public CreateReportResponse updateReport(AuthUser currentUser, UUID id, CreateReportRequest request) {
 
-        LostReport lostReport = findOwnedReport(currentUser, id);
+        ItemReport lostReport = findOwnedReport(currentUser, id);
         lostReport.setItemName(request.getItemName());
         lostReport.setDescription(request.getDescription());
         lostReport.setCity(request.getCity());
+        lostReport.setType(request.getType());
 
         return toResponse(reportRepository.save(lostReport));
     }
@@ -80,15 +85,17 @@ class ReportServiceImpl implements ReportService {
         reportRepository.delete(findOwnedReport(currentUser, id));
     }
 
-    // Not found and "belongs to someone else" both give 404, so ids can't be probed.
-    private LostReport findOwnedReport(AuthUser currentUser, UUID id) {
+    // Not found and "belongs to someone else" both give 404, so ids can't be
+    // probed.
+    private ItemReport findOwnedReport(AuthUser currentUser, UUID id) {
         return reportRepository.findByIdAndOwnerId(id, currentUser.userId())
                 .orElseThrow(() -> new ReportNotFoundException(id));
     }
 
-    private CreateReportResponse toResponse(LostReport report) {
+    private CreateReportResponse toResponse(ItemReport report) {
         return new CreateReportResponse(
                 report.getId(),
+                report.getType(),
                 report.getItemName(),
                 report.getDescription(),
                 report.getCity(),

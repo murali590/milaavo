@@ -3,7 +3,7 @@ package com.milaavo.report.service.impl;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
 import com.milaavo.report.dto.PagedResponse;
-import com.milaavo.report.entity.LostReport;
+import com.milaavo.report.entity.ItemReport;
 import com.milaavo.exception.ReportNotFoundException;
 import com.milaavo.report.repository.ReportRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,13 +35,13 @@ class ReportServiceImplTest {
     private ReportServiceImpl reportService;
 
     private UUID reportId;
-    private LostReport existingReport;
+    private ItemReport existingReport;
 
     @BeforeEach
     void setUp() {
         reportId = UUID.randomUUID();
 
-        existingReport = new LostReport();
+        existingReport = new ItemReport();
         existingReport.setId(reportId);
         existingReport.setItemName("Black wallet");
         existingReport.setDescription("Leather wallet");
@@ -56,9 +56,9 @@ class ReportServiceImplTest {
         request.setDescription("Leather wallet");
         request.setCity("Bengaluru");
 
-        when(reportRepository.save(any(LostReport.class)))
+        when(reportRepository.save(any(ItemReport.class)))
                 .thenAnswer(invocation -> {
-                    LostReport report = invocation.getArgument(0);
+                    ItemReport report = invocation.getArgument(0);
                     report.setId(reportId);
                     return report;
                 });
@@ -71,7 +71,7 @@ class ReportServiceImplTest {
         assertEquals("Bengaluru", response.city());
         assertEquals("REPORTED", response.status());
 
-        verify(reportRepository).save(any(LostReport.class));
+        verify(reportRepository).save(any(ItemReport.class));
     }
 
     @Test
@@ -83,7 +83,7 @@ class ReportServiceImplTest {
 
         when(reportRepository.findById(reportId))
                 .thenReturn(Optional.of(existingReport));
-        when(reportRepository.save(any(LostReport.class)))
+        when(reportRepository.save(any(ItemReport.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         CreateReportResponse response =
@@ -116,7 +116,7 @@ class ReportServiceImplTest {
                 () -> reportService.updateReport(missingId, request)
         );
 
-        verify(reportRepository, never()).save(any(LostReport.class));
+        verify(reportRepository, never()).save(any(ItemReport.class));
     }
 
     @Test
@@ -142,7 +142,7 @@ class ReportServiceImplTest {
                 () -> reportService.deleteReport(missingId)
         );
 
-        verify(reportRepository, never()).delete(any(LostReport.class));
+        verify(reportRepository, never()).delete(any(ItemReport.class));
     }
 
     @Test
@@ -179,7 +179,7 @@ void getReportById_shouldThrowWhenReportDoesNotExist() {
 @Test
 void getAllReports_shouldReturnReportsWithPaginationMetadata() {
     Pageable pageable = PageRequest.of(0, 10);
-    Page<LostReport> reportPage =
+    Page<ItemReport> reportPage =
             new PageImpl<>(List.of(existingReport), pageable, 1);
 
     when(reportRepository.findAll(any(Pageable.class)))
@@ -203,7 +203,7 @@ void getAllReports_shouldReturnReportsWithPaginationMetadata() {
 @Test
 void getAllReports_shouldReturnEmptyPageWhenNoReportsExist() {
     Pageable pageable = PageRequest.of(0, 10);
-    Page<LostReport> emptyPage =
+    Page<ItemReport> emptyPage =
             new PageImpl<>(List.of(), pageable, 0);
 
     when(reportRepository.findAll(any(Pageable.class)))

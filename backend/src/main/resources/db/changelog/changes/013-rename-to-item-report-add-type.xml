@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="013-rename-to-item-report-add-type" author="milaavo">
+        <!-- The table now holds lost, found and swapped items. -->
+        <renameTable oldTableName="lost_report" newTableName="item_report"/>
+
+        <!-- Keep constraint and index names in line with the new table name. -->
+        <sql>
+            ALTER TABLE item_report RENAME CONSTRAINT pk_lost_report TO pk_item_report;
+            ALTER TABLE item_report RENAME CONSTRAINT fk_lost_report_owner TO fk_item_report_owner;
+            ALTER INDEX idx_lost_report_owner_created RENAME TO idx_item_report_owner_created;
+        </sql>
+
+        <!-- Default fills existing rows (all were lost reports), then is dropped so the app must always set it. -->
+        <addColumn tableName="item_report">
+            <column name="type" type="VARCHAR(20)" defaultValue="LOST">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <dropDefaultValue tableName="item_report" columnName="type"/>
+
+        <sql>
+            ALTER TABLE item_report ADD CONSTRAINT ck_item_report_type CHECK (type IN ('LOST', 'FOUND', 'SWAPPED'));
+        </sql>
+    </changeSet>
+</databaseChangeLog>

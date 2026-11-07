@@ -5,6 +5,7 @@ import com.milaavo.common.security.CurrentUser;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
 import com.milaavo.report.dto.PagedResponse;
+import com.milaavo.report.enums.ReportType;
 import com.milaavo.report.service.ReportService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -43,10 +44,11 @@ public class ReportController {
     @GetMapping
     public ResponseEntity<PagedResponse<CreateReportResponse>> getAllReports(
             @CurrentUser AuthUser currentUser,
+            @RequestParam(required = false) ReportType type,
             @RequestParam(defaultValue = "0") @Min(value = 0, message = "Page number must be at least 0") int page,
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "Size must be at least 1") @Max(value = 100, message = "Size must be at most 100") int size) {
 
-        return ResponseEntity.ok(reportService.getAllReports(currentUser, page, size));
+        return ResponseEntity.ok(reportService.getAllReports(currentUser, type, page, size));
     }
 
     @GetMapping("/{id}")

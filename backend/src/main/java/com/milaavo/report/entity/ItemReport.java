@@ -1,5 +1,6 @@
 package com.milaavo.report.entity;
 
+import com.milaavo.report.enums.ReportType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,11 +9,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "lost_report")
+@Table(name = "item_report")
 @Getter
-@Setter 
-
-public class LostReport {
+@Setter
+public class ItemReport {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -21,6 +21,10 @@ public class LostReport {
 
     @Column(name = "owner_id", nullable = false, updatable = false)
     private UUID ownerId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    private ReportType type;
 
     @Column(name = "item_name", nullable = false, length = 200)
     private String itemName;
@@ -37,5 +41,4 @@ public class LostReport {
     @Column(name = "created_at", nullable = false, updatable = false)
     @org.hibernate.annotations.CreationTimestamp
     private Instant createdAt;
-
 }
