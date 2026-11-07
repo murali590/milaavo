@@ -1,6 +1,9 @@
+import type { ReportType } from './reportTypes'
+
 // Matches CreateReportResponse in the backend.
-export type LostReport = {
+export type ItemReport = {
   reportId: string
+  type: ReportType
   itemName: string
   description: string
   city: string
@@ -17,4 +20,12 @@ export type PagedResponse<T> = {
   totalPages: number
   first: boolean
   last: boolean
+}
+
+// Body for create and update (CreateReportRequest in the backend).
+export type ReportInput = {
+  type: ReportType
+  itemName: string
+  description: string
+  city: string
 }
