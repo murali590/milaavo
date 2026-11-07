@@ -142,10 +142,10 @@ All three fields are `@NotBlank`, with max lengths: `itemName` 200, `description
 Report representation (`CreateReportResponse`):
 
 ```json
-{ "reportId": "…", "itemName": "…", "description": "…", "city": "…", "status": "REPORTED" }
+{ "reportId": "…", "itemName": "…", "description": "…", "city": "…", "status": "REPORTED", "createdAt": "2026-11-02T06:30:00.123Z" }
 ```
 
-`createdAt` is stored but not returned.
+`createdAt` is an ISO-8601 UTC instant. Create uses `saveAndFlush`, so the INSERT runs before the response is built and `@CreationTimestamp` has already filled the value.
 
 | Method | Path | Success | Notes |
 |---|---|---|---|
