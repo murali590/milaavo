@@ -8,7 +8,7 @@ Source of truth: Liquibase changesets in `backend/src/main/resources/db/changelo
 erDiagram
     app_user ||--o{ otp_challenge : "has"
     app_user ||--o{ otp_resend_attempt : "has"
-    app_user ||--o{ lost_report : "owns"
+    app_user ||--o{ item_report : "owns"
     app_user {
         uuid id PK
         varchar name
@@ -46,9 +46,10 @@ erDiagram
         varchar last_error
         timestamptz created_at
     }
-    lost_report {
+    item_report {
         uuid id PK
         uuid owner_id FK
+        varchar type "LOST | FOUND | SWAPPED"
         varchar item_name
         text description
         varchar city
@@ -59,7 +60,7 @@ erDiagram
 
 `sms_outbox` deliberately has no foreign key to `app_user`. It is a delivery queue, and a message must still be sendable (or auditable) after unrelated user changes.
 
-Every `lost_report` row belongs to one user through `owner_id` (added in changeset 008, G-06 fix).
+Every `item_report` row belongs to one user through `owner_id` (added in changeset 008, G-06 fix).
 
 ## Tables
 
@@ -124,21 +125,23 @@ Index: `idx_otp_resend_attempt_user_requested (user_id, requested_at)`. It serve
 
 Index: `idx_sms_outbox_status_created_at (status, created_at)`.
 
-### `lost_report` (changesets 001, 008)
+### `item_report` (changesets 001, 008, 013)
+
+Called `lost_report` until changeset 013 renamed it, together with its constraints and index, when found and swapped reports were added.
 
 | Column | Type | Constraint | Notes |
 |---|---|---|---|
 | `id` | UUID | PK | |
-| `owner_id` | UUID | NOT NULL, FK `fk_lost_report_owner` → `app_user` | Set from the logged-in user on create. `updatable = false` in the entity, so it never changes |
+| `owner_id` | UUID | NOT NULL, FK `fk_item_report_owner` → `app_user` | Set from the logged-in user on create. `updatable = false` in the entity, so it never changes |
 | `item_name` | VARCHAR(200) | NOT NULL | DTO: `@Size(max = 200)` |
 | `description` | TEXT | NOT NULL | No DB limit. DTO: `@Size(max = 2000)` |
 | `city` | VARCHAR(100) | NOT NULL | DTO: `@Size(max = 100)` |
 | `status` | VARCHAR(30) | NOT NULL | Always `REPORTED` today. Plain string, not an enum |
 | `created_at` | TIMESTAMPTZ | NOT NULL | `@CreationTimestamp` |
 
-Index: `idx_lost_report_owner_created (owner_id, created_at)`. It serves the "my reports, newest first" list (`WHERE owner_id = ? ORDER BY created_at DESC`). PostgreSQL can read a B-tree index backwards, so the `DESC` sort doesn't need a separate index.
+Index: `idx_item_report_owner_created (owner_id, created_at)`. It serves the "my reports, newest first" list (`WHERE owner_id = ? ORDER BY created_at DESC`). PostgreSQL can read a B-tree index backwards, so the `DESC` sort doesn't need a separate index.
 
-> Changeset 008 deletes the existing `lost_report` rows before adding the `NOT NULL` column. That's fine for local test data only. With real data, use **expand → migrate → contract**: add the column as nullable, fill it in, then make it `NOT NULL` in a later release.
+> Changeset 008 deleted the existing `lost_report` rows before adding the `NOT NULL` column. That's fine for local test data only. With real data, use **expand → migrate → contract**: add the column as nullable, fill it in, then make it `NOT NULL` in a later release.
 
 > Changeset numbering skips `005`. That is harmless, because Liquibase tracks changesets by id/author/file, not by number. Do not reuse 005 later, to avoid confusion.
 
@@ -148,12 +151,12 @@ Each one is a new changeset. Never edit an applied changeset, because Liquibase 
 
 | # | Change | Why |
 |---|---|---|
-| ~~P-1~~ | ~~`lost_report.owner_id` + index~~ | ✅ Done in changeset 008 (G-06) |
-| P-2 | `lost_report.updated_at TIMESTAMPTZ` and `version BIGINT` (`@Version`) | Audit trail and optimistic locking on concurrent PUTs |
+| ~~P-1~~ | ~~`item_report.owner_id` + index~~ | ✅ Done in changeset 008 (G-06) |
+| P-2 | `item_report.updated_at TIMESTAMPTZ` and `version BIGINT` (`@Version`) | Audit trail and optimistic locking on concurrent PUTs |
 | P-3 | Partial index `CREATE INDEX idx_sms_outbox_due ON sms_outbox (next_attempt_at) WHERE status = 'PENDING'` | Matches the claim query. The existing `(status, created_at)` index cannot filter on `next_attempt_at`. Verify with `EXPLAIN ANALYZE` on realistic data first |
 | ~~P-4~~ | ~~`sms_outbox.claim_token UUID`~~ | ✅ Done in changeset 010 (G-03) |
 | ~~P-5~~ | ~~`sms_outbox.expires_at`~~ | ✅ Done in changeset 011 (G-17) |
-| P-6 | `CHECK (status IN (...))` on `app_user`, `sms_outbox`, `lost_report` | The database should enforce invariants even if a bug or manual SQL writes a bad value |
+| P-6 | `CHECK (status IN (...))` on `app_user`, `sms_outbox`, `item_report` (done for `item_report.type`: `ck_item_report_type`) | The database should enforce invariants even if a bug or manual SQL writes a bad value |
 | P-7 | Retention job: delete or redact `sms_outbox.message` once `SENT`/`FAILED`, purge old `otp_challenge` and `otp_resend_attempt` rows | Limits personal data and table growth (G-01, G-16) |
 
 ## Persistence rules

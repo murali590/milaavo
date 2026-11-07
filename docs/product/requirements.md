@@ -82,7 +82,7 @@ Anyone signed in can search public found reports by category, area and date, and
 
 ### 3.2 Item reports: `FR-ITEM`
 
-The current `lost_report` table becomes a general `item_report` (see §5).
+The `lost_report` table was renamed to `item_report` with a `type` column on 7 Nov 2026 (changeset 013). Types: `LOST`, `FOUND` and `SWAPPED`. **SWAPPED** means "swapped by mistake": the reporter has someone else's item and that person has theirs. It is stored as one report (a product decision), so matching must treat it as both lost and found. For now its item name is the reporter's own item, and the description explains the item they have; structured "item I have" fields come with matching.
 
 | Id | Requirement | Pri | Status |
 |---|---|---|---|
@@ -301,7 +301,7 @@ Key constraints:
 - `item_match`: `UNIQUE (lost_report_id, found_report_id)`, plus a check that the two reports have opposite types (enforced in the service, since a CHECK cannot look at other rows).
 - `claim`: partial unique index `ON claim (found_report_id) WHERE status IN ('ACCEPTED','HANDED_OVER','COMPLETED')`, so only one successful claim per item (FR-CLAIM-6). Also `UNIQUE (found_report_id, claimant_id)`.
 - `item_report`: index on `(type, category, status, event_date_from)`. Use the `earthdistance`/`cube` extension or PostGIS for radius queries (or a bounding-box prefilter on lat/lng). Add an HNSW index on the `pgvector` columns in Phase 4.
-- Migration from `lost_report`: expand/contract. Create `item_report`, copy the rows as `type = LOST` (with the reporter unknown → assign to a seed admin, or truncate the dev data), switch the code, then drop `lost_report`.
+- Migration from `lost_report`: **done** (changeset 013) with a direct rename, since only test data existed. Existing rows became `type = LOST`.
 
 ---
 

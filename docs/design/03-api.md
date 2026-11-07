@@ -134,15 +134,15 @@ Send `Authorization: Bearer <accessToken>`. Requests without a token, or with an
 Report body (`CreateReportRequest`, used for both create and update):
 
 ```json
-{ "itemName": "Black wallet", "description": "Lost near MG Road metro", "city": "Bengaluru" }
+{ "type": "LOST", "itemName": "Black wallet", "description": "Lost near MG Road metro", "city": "Bengaluru" }
 ```
 
-All three fields are `@NotBlank`, with max lengths: `itemName` 200, `description` 2000, `city` 100. Longer values return 400 `VALIDATION_ERROR` with `fieldErrors`.
+`type` is required: `LOST`, `FOUND` or `SWAPPED` (swapped by mistake). A missing type gives 400 `VALIDATION_ERROR`; an unknown value gives 400 `INVALID_REQUEST_BODY`. The other three fields are `@NotBlank`, with max lengths: `itemName` 200, `description` 2000, `city` 100. Longer values return 400 `VALIDATION_ERROR` with `fieldErrors`.
 
 Report representation (`CreateReportResponse`):
 
 ```json
-{ "reportId": "…", "itemName": "…", "description": "…", "city": "…", "status": "REPORTED", "createdAt": "2026-11-02T06:30:00.123Z" }
+{ "reportId": "…", "type": "LOST", "itemName": "…", "description": "…", "city": "…", "status": "REPORTED", "createdAt": "2026-11-02T06:30:00.123Z" }
 ```
 
 `createdAt` is an ISO-8601 UTC instant. Create uses `saveAndFlush`, so the INSERT runs before the response is built and `@CreationTimestamp` has already filled the value.
@@ -150,7 +150,7 @@ Report representation (`CreateReportResponse`):
 | Method | Path | Success | Notes |
 |---|---|---|---|
 | POST | `/api/reports` | 201 + report | `status` is always `REPORTED` |
-| GET | `/api/reports?page=0&size=10` | 200 + page | **Only my reports.** `page ≥ 0`, `1 ≤ size ≤ 100`. Sorted by `createdAt DESC`. The client cannot choose the sort (no SQL-injection surface) |
+| GET | `/api/reports?page=0&size=10&type=FOUND` | 200 + page | **Only my reports.** `type` is optional (`LOST`, `FOUND`, `SWAPPED`); a wrong value gives 400 `INVALID_PARAMETER`. `page ≥ 0`, `1 ≤ size ≤ 100`. Sorted by `createdAt DESC`. The client cannot choose the sort (no SQL-injection surface) |
 | GET | `/api/reports/{id}` | 200 + report | 404 `REPORT_NOT_FOUND` if missing or not mine. 400 `INVALID_PARAMETER` for a non-UUID |
 | PUT | `/api/reports/{id}` | 200 + report | Full replacement of the three fields. 404 if missing or not mine |
 | DELETE | `/api/reports/{id}` | 204 | Hard delete. 404 if missing or not mine |

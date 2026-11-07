@@ -26,7 +26,7 @@ flowchart TB
         health["health"]
         common["common / exception / config"]
     end
-    db[("PostgreSQL<br/>app_user, otp_challenge,<br/>otp_resend_attempt,<br/>lost_report, sms_outbox")]
+    db[("PostgreSQL<br/>app_user, otp_challenge,<br/>otp_resend_attempt,<br/>item_report, sms_outbox")]
     provider["SMS provider<br/>(LocalSmsSender logs only today)"]
 
     client -- HTTPS JSON --> sec
@@ -44,7 +44,7 @@ flowchart TB
 | `auth` | Registration, login, mobile verification, resend OTP, JWT issuing | `AuthController`, `UserServiceImpl`, `JwtService`, `User` | Implemented |
 | `otp` | Issue and verify OTP challenges for any purpose, HMAC hashing, resend limits | `OtpServiceImpl`, `OtpVerificationTransaction`, `OtpHasher`, `OtpChallenge`, `OtpResendAttempt` | Implemented |
 | `notification.sms` | Outbox enqueue, claim, send, retry, recover; provider abstraction | `SmsOutboxService`, `SmsOutboxWorker`, `SmsOutboxClaimService`, `SmsOutboxProcessor`, `SmsOutboxRecoveryService`, `SmsSender` | Implemented, with gaps (see [05](05-sms-outbox.md)) |
-| `report` | Lost-item report CRUD and pagination, scoped to the owner | `ReportController`, `ReportServiceImpl`, `LostReport` | Implemented |
+| `report` | Lost, found and swapped item reports: CRUD, paging, type filter, scoped to the owner | `ReportController`, `ReportServiceImpl`, `LostReport` | Implemented |
 | `config` | Security filter chain, JWT encoder/decoder, password encoder, JSON 401/403 | `SecurityConfig`, `JwtConfig`, `PasswordConfig`, `ApiSecurityErrorHandler` | Implemented |
 | `exception` | Map exceptions to a stable error body | `GlobalExceptionHandler` | Implemented |
 | `common` | Shared response types, logged-in user context | `ApiErrorResponse`, `AuthUser`, `@CurrentUser`, `AuthUserJwtConverter` | Implemented |
