@@ -20,3 +20,13 @@ export async function createReport(body: ReportInput): Promise<ItemReport> {
   const { data } = await http.post<ItemReport>('/api/reports', body)
   return data
 }
+
+export async function fetchReport(id: string, signal?: AbortSignal): Promise<ItemReport> {
+  const { data } = await http.get<ItemReport>(`/api/reports/${id}`, { signal })
+  return data
+}
+
+export async function updateReport(id: string, body: ReportInput): Promise<ItemReport> {
+  const { data } = await http.put<ItemReport>(`/api/reports/${id}`, body)
+  return data
+}

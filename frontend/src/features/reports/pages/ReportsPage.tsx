@@ -87,7 +87,7 @@ export function ReportsPage() {
           <ul className={isPlaceholderData ? 'space-y-3 opacity-60' : 'space-y-3'}>
             {data.content.map((report) => (
               <li key={report.reportId}>
-                <ReportCard report={report} />
+                <ReportCard report={report} listSearch={location.search}/>
               </li>
             ))}
           </ul>

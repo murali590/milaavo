@@ -7,6 +7,8 @@ import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { ReportsPage } from '../features/reports/pages/ReportsPage'
 import { VerifyMobilePage } from '../features/auth/pages/VerifyMobilePage'
 import { NewReportPage } from '../features/reports/pages/NewReportPage'
+import { ReportDetailPage } from '../features/reports/pages/ReportDetailPage'
+import { EditReportPage } from '../features/reports/pages/EditReportPage'
 
 export const router = createBrowserRouter([
   {
@@ -23,8 +25,11 @@ export const router = createBrowserRouter([
       },
       {
         element: <RequireAuth />,
-        children: [{ path: 'reports', element: <ReportsPage /> },
+        children: [
+          { path: 'reports', element: <ReportsPage /> },
           { path: 'reports/new', element: <NewReportPage /> },
+          { path: 'reports/:id', element: <ReportDetailPage /> },
+          { path: 'reports/:id/edit', element: <EditReportPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> }
