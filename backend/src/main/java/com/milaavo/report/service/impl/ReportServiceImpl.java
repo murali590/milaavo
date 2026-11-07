@@ -35,7 +35,7 @@ class ReportServiceImpl implements ReportService {
         lostReport.setCity(request.getCity());
         lostReport.setStatus("REPORTED");
 
-        return toResponse(reportRepository.save(lostReport));
+        return toResponse(reportRepository.saveAndFlush(lostReport));
     }
 
     @Override
@@ -92,6 +92,7 @@ class ReportServiceImpl implements ReportService {
                 report.getItemName(),
                 report.getDescription(),
                 report.getCity(),
-                report.getStatus());
+                report.getStatus(),
+                report.getCreatedAt());
     }
 }

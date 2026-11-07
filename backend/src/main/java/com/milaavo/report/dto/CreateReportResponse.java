@@ -1,5 +1,6 @@
 package com.milaavo.report.dto;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public record CreateReportResponse(
@@ -7,6 +8,7 @@ public record CreateReportResponse(
         String itemName,
         String description,
         String city,
-        String status
+        String status,
+        Instant createdAt
 ) {
 }
