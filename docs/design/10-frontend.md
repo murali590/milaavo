@@ -1,6 +1,6 @@
 # 10. Frontend (web app)
 
-*Started 25 Oct 2026. Status: planning. Product scope: [requirements](../product/requirements.md).*
+*Started 25 Oct 2026. Status: F1–F7 done (7 Nov 2026); next is the refresh-token step, then F8. Product scope: [requirements](../product/requirements.md).*
 
 One responsive web app that works well in phone browsers. No native apps (see [vision](../product/vision.md#non-goals-for-now)).
 
@@ -98,14 +98,22 @@ frontend/
 
 | Step | What | Learning focus |
 |---|---|---|
-| **F1** | Create the project: Vite + React + TS + Tailwind, `VITE_API_BASE_URL`, a health-check page | Tooling, env vars, a real CORS call from the browser |
-| F1.5 | UI theme: colour tokens, Inter font, base styles | Design tokens, contrast, dark-ready CSS |
-| F2 | API client on axios: instance, interceptors, `ApiError`, attach the token | One place for HTTP and errors |
-| F3 | Routing, layout, auth state in memory, protected routes | Context, route guards |
-| F4 | Register → verify OTP → resend (countdown, error codes) | Forms, validation, UX for error codes |
-| F5 | Login, logout, handle 401 | Session flow |
-| F6 | My reports list with paging | TanStack Query, loading and empty states |
-| F7 | Create, edit, delete report | Mutations, cache invalidation, zod rules matching the backend |
+| **F1** | ✅ Create the project: Vite + React + TS + Tailwind, `VITE_API_BASE_URL`, a health-check page | Tooling, env vars, a real CORS call from the browser |
+| F1.5 | ✅ UI theme: colour tokens, Inter font, base styles | Design tokens, contrast, dark-ready CSS |
+| F2 | ✅ API client on axios: instance, interceptors, `ApiError`, attach the token | One place for HTTP and errors |
+| F3 | ✅ Routing, layout, auth state in memory, protected routes | Context, route guards |
+| F4 | ✅ Register → verify OTP → resend (countdown, error codes) | Forms, validation, UX for error codes |
+| F5 | ✅ Login, logout, handle 401 | Session flow |
+| F6 | ✅ My reports list with paging | TanStack Query, loading and empty states |
+| F7 | ✅ Create, edit, delete report | Mutations, cache invalidation, zod rules matching the backend |
 | F8 | Polish: mobile layout, accessibility, error and loading states | Responsive design, a11y basics |
 
-Later (with backend work): refresh-token cookie, found items, photos, matching and claims.
+Notes from building it:
+
+- F3: the session is an external store (`sessionStore` + `useSyncExternalStore`), not React Context, because the axios interceptor also needs the token.
+- F5: after login the page only calls `signIn`; `RedirectIfAuthenticated` does the redirect to `from` (path + query), so there is one owner and no race.
+- F6/F7: query keys come from `reportKeys`. Create and delete invalidate the lists; update writes the PUT response into the detail cache. The cache is cleared on sign-out.
+- F7: reports have a type (Lost, Found, Swapped) with metadata in `REPORT_TYPE_INFO`; delete uses a native `<dialog>` and treats 404 as already deleted.
+- Adding or changing routes needs a full page reload in dev: `RouterProvider` keeps the router it started with.
+
+Next (with backend work): refresh-token cookie, so a reload doesn't log the user out. Later: found-item details, photos, matching and claims.
