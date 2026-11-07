@@ -30,3 +30,7 @@ export async function updateReport(id: string, body: ReportInput): Promise<ItemR
   const { data } = await http.put<ItemReport>(`/api/reports/${id}`, body)
   return data
 }
+
+export async function deleteReport(id: string): Promise<void> {
+  await http.delete(`/api/reports/${id}`)
+}

@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { createReport, fetchReport, fetchReports, updateReport } from './api'
+import { createReport, fetchReport, fetchReports, updateReport, deleteReport } from './api'
 import type { ReportType } from './reportTypes'
 import type { ItemReport, PagedResponse, ReportInput } from './types'
 
@@ -70,4 +70,14 @@ export function useUpdateReport() {
             return queryClient.invalidateQueries({ queryKey: reportKeys.lists() })
         },
     })
+}
+
+export function useDeleteReport() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteReport,
+    // Gone from every list (order, totals and pages change).
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportKeys.lists() }),
+  })
 }
