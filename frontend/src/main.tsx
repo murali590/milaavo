@@ -6,11 +6,12 @@ import App from './App.tsx'
 import { configureHttp } from './shared/api/http'
 import { sessionStore } from './features/auth/sessionStore.ts'
 import { queryClient } from './app/queryClient'
-import { restoreSession } from './features/auth/sessionRefresh'
+import { refreshAccessToken, restoreSession } from './features/auth/sessionRefresh'
 
 // Connect the HTTP client to the session once, before anything renders.
 configureHttp({
   getAccessToken: sessionStore.getAccessToken,
+  refreshAccessToken,
   onUnauthorized: () => sessionStore.signOut('expired'),
 })
 

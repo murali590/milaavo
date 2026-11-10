@@ -2,16 +2,28 @@ import axios from 'axios'
 import { ApiError, type ApiErrorBody } from './ApiError'
 import { ErrorCode } from './errorCodes'
 
+
+// Our own marker on a request, so a 401 is retried only once.
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    _retried?: boolean
+  }
+}
+
 // Set once by the auth layer (F3), so this file doesn't depend on React.
 type HttpConfig = {
   getAccessToken: () => string | null
+  // Gets a new access token from the refresh cookie. Null = no valid session.
+  refreshAccessToken: () => Promise<string | null>
   onUnauthorized: () => void
 }
 
 let config: HttpConfig = {
   getAccessToken: () => null,
+  refreshAccessToken: () => Promise.resolve(null),
   onUnauthorized: () => {},
 }
+
 
 export function configureHttp(next: Partial<HttpConfig>): void {
   config = { ...config, ...next }
@@ -37,26 +49,39 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+
 // After every response: turn any failure into an ApiError.
+// On 401 for a call that sent a token: refresh once and retry, else log out.
 http.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     // A cancelled request is not a failure: pass it through for the caller to ignore.
     if (axios.isCancel(error)) {
       return Promise.reject(error)
     }
 
     const apiError = toApiError(error)
+    const original = axios.isAxiosError(error) ? error.config : undefined
 
-    // Only an expired or invalid token should log the user out, not a wrong password on login.
-    const sentToken = axios.isAxiosError(error) && Boolean(error.config?.headers?.has('Authorization'))
-    if (apiError.status === 401 && sentToken) {
+    // Only an expired or invalid token counts, not a wrong password on login.
+    const sentToken = Boolean(original?.headers?.has('Authorization'))
+
+    if (apiError.status === 401 && original && sentToken) {
+      if (!original._retried) {
+        original._retried = true
+        const newToken = await config.refreshAccessToken()
+        if (newToken) {
+          // The request interceptor attaches the new token.
+          return http(original)
+        }
+      }
       config.onUnauthorized()
     }
 
     return Promise.reject(apiError)
   },
 )
+
 
 function toApiError(error: unknown): ApiError {
   if (!axios.isAxiosError(error)) {
