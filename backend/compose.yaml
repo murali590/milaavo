@@ -1,0 +1,36 @@
+# Local stack: Postgres + backend. Run from backend/:  docker compose up --build
+name: milaavo
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: milaavo
+      POSTGRES_USER: ${DB_USERNAME}       # values come from backend/.env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"   # only for psql from your Mac (5432 is your local Postgres). The app doesn't need it
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # $$ = a literal $, so the container's shell reads the variable, not compose
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d milaavo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .                              # uses backend/Dockerfile
+    image: milaavo-backend:local
+    env_file: .env                        # secrets at run time, not in the image
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/milaavo   # "db" = the service name above (compose DNS)
+    ports:
+      - "8091:8091"
+    depends_on:
+      db:
+        condition: service_healthy        # wait until Postgres is ready, not just started
+    restart: unless-stopped               # if the app crashes, start it again
+
+volumes:
+  pgdata:                                 # named volume: survives "docker compose down"
