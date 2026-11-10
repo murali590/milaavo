@@ -19,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import com.milaavo.auth.exception.UserAlreayActiveException;
 import com.milaavo.auth.exception.AccountDisabledException;
+import com.milaavo.auth.exception.InvalidRefreshTokenException;
 import com.milaavo.auth.exception.InvalidVerificationRequestException;
 import com.milaavo.auth.exception.MobileNotVerifiedException;
 
@@ -268,5 +269,18 @@ public class GlobalExceptionHandler {
                                 .status(statusCode)
                                 .headers(errorResponse.getHeaders())
                                 .body(response);
+        }
+
+        @ExceptionHandler(InvalidRefreshTokenException.class)
+        public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken(
+                        InvalidRefreshTokenException ex) {
+
+                ApiErrorResponse response = new ApiErrorResponse(
+                                401,
+                                "INVALID_REFRESH_TOKEN",
+                                ex.getMessage(),
+                                null);
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 }

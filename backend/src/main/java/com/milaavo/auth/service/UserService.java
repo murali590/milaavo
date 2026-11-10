@@ -1,5 +1,6 @@
 package com.milaavo.auth.service;
 
+import com.milaavo.auth.dto.AuthSession;
 import com.milaavo.auth.dto.LoginRequest;
 import com.milaavo.auth.dto.LoginResponse;
 import com.milaavo.auth.dto.RegisterRequest;
@@ -14,7 +15,9 @@ public interface UserService {
 
     RegisterResponse register(RegisterRequest request);
 
-    LoginResponse login(LoginRequest request);
+    AuthSession login(LoginRequest request);
+
+    AuthSession refresh(String rawRefreshToken);
 
     void verifyMobileOtp(VerifyMobileOtpRequest request);
 

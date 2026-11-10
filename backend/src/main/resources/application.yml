@@ -27,6 +27,11 @@ app:
   jwt:
     secret: ${JWT_SECRET}
 
+  refresh-token:
+    ttl: 7d
+    # Used in R3. Chrome/Firefox allow Secure cookies on http://localhost.
+    cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+
   otp:
     hmac-secret: ${OTP_HMAC_SECRET}
 

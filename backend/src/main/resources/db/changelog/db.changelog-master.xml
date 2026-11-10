@@ -30,5 +30,7 @@
         relativeToChangelogFile="true"/>
     <include file="changes/013-rename-to-item-report-add-type.xml"
         relativeToChangelogFile="true"/>
+    <include file="changes/014-create-refresh-token.xml"
+        relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

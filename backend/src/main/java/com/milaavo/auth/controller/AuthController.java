@@ -1,5 +1,6 @@
 package com.milaavo.auth.controller;
 
+import com.milaavo.auth.dto.AuthSession;
 import com.milaavo.auth.dto.LoginRequest;
 import com.milaavo.auth.dto.LoginResponse;
 import com.milaavo.auth.dto.RegisterRequest;
@@ -17,12 +18,18 @@ import com.milaavo.auth.dto.ResentVerificationOTPResponse;
 import com.milaavo.auth.dto.StartVerificationRequest;
 import com.milaavo.auth.dto.StartVerificationResponse;
 
+import com.milaavo.auth.dto.AuthSession;
+import com.milaavo.auth.service.RefreshTokenService;
+import org.springframework.http.HttpHeaders;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenCookie refreshTokenCookie;
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
@@ -39,8 +46,31 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request) {
 
-        LoginResponse response = userService.login(request);
-        return ResponseEntity.ok(response);
+        AuthSession session = userService.login(request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.create(session.refreshToken()))
+                .body(session.response());
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(
+            @CookieValue(name = RefreshTokenCookie.NAME, required = false) String refreshToken) {
+
+        AuthSession session = userService.refresh(refreshToken);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.create(session.refreshToken()))
+                .body(session.response());
+    }
+
+    // Public on purpose: the access token may already be expired when the user logs out.
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = RefreshTokenCookie.NAME, required = false) String refreshToken) {
+
+        refreshTokenService.revoke(refreshToken);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.clear())
+                .build();
     }
 
     @PostMapping("/verify-mobile")

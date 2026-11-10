@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="014-create-refresh-token" author="milaavo">
+        <createTable tableName="refresh_token">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true"
+                             primaryKeyName="pk_refresh_token"
+                             nullable="false"/>
+            </column>
+
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_refresh_token_user"
+                             references="app_user(id)"/>
+            </column>
+
+            <!-- SHA-256 as hex = 64 chars. The raw token is never stored. -->
+            <column name="token_hash" type="VARCHAR(64)">
+                <constraints nullable="false"
+                             unique="true"
+                             uniqueConstraintName="uk_refresh_token_hash"/>
+            </column>
+
+            <!-- All tokens from one login share a family. Reuse revokes the family. -->
+            <column name="family_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="revoked_at" type="TIMESTAMP WITH TIME ZONE"/>
+
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="refresh_token" indexName="idx_refresh_token_family">
+            <column name="family_id"/>
+        </createIndex>
+
+        <createIndex tableName="refresh_token" indexName="idx_refresh_token_user">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

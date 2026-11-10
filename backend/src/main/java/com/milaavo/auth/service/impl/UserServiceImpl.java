@@ -1,5 +1,6 @@
 package com.milaavo.auth.service.impl;
 
+import com.milaavo.auth.dto.AuthSession;
 import com.milaavo.auth.dto.LoginRequest;
 import com.milaavo.auth.dto.LoginResponse;
 import com.milaavo.auth.dto.RegisterRequest;
@@ -7,6 +8,7 @@ import com.milaavo.auth.entity.User;
 import com.milaavo.auth.enums.UserStatus;
 import com.milaavo.auth.repository.UserRepository;
 import com.milaavo.auth.service.JwtService;
+import com.milaavo.auth.service.RefreshTokenService;
 import com.milaavo.auth.service.UserService;
 import lombok.RequiredArgsConstructor;
 
@@ -51,6 +53,7 @@ public class UserServiceImpl implements UserService {
         private final OtpService otpService;
         private final OtpResendAttemptRepository otpResendAttemptRepository;
         private final OtpResendProperties otpResendProperties;
+        private final RefreshTokenService refreshTokenService;
 
         @Override
         @Transactional
@@ -98,8 +101,7 @@ public class UserServiceImpl implements UserService {
         }
 
         @Override
-        @Transactional(readOnly = true)
-        public LoginResponse login(LoginRequest request) {
+        public AuthSession login(LoginRequest request) {
                 String mobileNumber = request.getMobileNumber().trim();
 
                 User user = userRepository.findByMobileNumber(mobileNumber)
@@ -123,6 +125,20 @@ public class UserServiceImpl implements UserService {
                                         "Please verify your mobile number to log in");
                 }
 
+                String refreshToken = refreshTokenService.issue(user.getId());
+                return new AuthSession(toLoginResponse(user), refreshToken);
+        }
+
+        // No @Transactional on purpose: rotate() has its own transaction with
+        // noRollbackFor.
+        // An outer transaction here would roll back the family revoke on reuse.
+        @Override
+        public AuthSession refresh(String rawRefreshToken) {
+                RefreshTokenService.RotatedToken rotated = refreshTokenService.rotate(rawRefreshToken);
+                return new AuthSession(toLoginResponse(rotated.user()), rotated.rawToken());
+        }
+
+        private LoginResponse toLoginResponse(User user) {
                 return LoginResponse.builder()
                                 .userId(user.getId())
                                 .name(user.getName())

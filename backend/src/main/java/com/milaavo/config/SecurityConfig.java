@@ -45,7 +45,9 @@ public class SecurityConfig {
                                                                 "/api/auth/login",
                                                                 "/api/auth/verify-mobile",
                                                                 "/api/auth/verify/resend-otp",
-                                                                "/api/auth/verify/start")
+                                                                "/api/auth/verify/start",
+                                                                "/api/auth/refresh",
+                                                                "/api/auth/logout")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -63,6 +65,7 @@ public class SecurityConfig {
                 config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
                 config.setMaxAge(Duration.ofHours(1));
+                config.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/api/**", config);
