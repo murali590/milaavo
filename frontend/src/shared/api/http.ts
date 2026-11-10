@@ -22,12 +22,16 @@ export const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15_000,
   headers: { Accept: 'application/json' },
+  // Send and accept the refresh-token cookie on cross-origin calls.
+  withCredentials: true,
 })
 
-// Before every request: attach the token, if we have one.
+
+// Before every request: attach the token, but never to /api/auth/*.
+// Spring rejects an expired Bearer token even on public endpoints, which would break /refresh.
 http.interceptors.request.use((request) => {
   const token = config.getAccessToken()
-  if (token) {
+  if (token && !request.url?.startsWith('/api/auth/')) {
     request.headers.set('Authorization', `Bearer ${token}`)
   }
   return request

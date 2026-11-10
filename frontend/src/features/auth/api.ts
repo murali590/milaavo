@@ -33,3 +33,13 @@ export async function startVerification(body: LoginRequest): Promise<VerifyMobil
   const { data } = await http.post<VerifyMobileState>('/api/auth/verify/start', body)
   return data
 }
+
+// The browser sends the HttpOnly cookie by itself. JS never sees the refresh token.
+export async function refreshSession(): Promise<LoginResponse> {
+  const { data } = await http.post<LoginResponse>('/api/auth/refresh')
+  return data
+}
+
+export async function logoutSession(): Promise<void> {
+  await http.post('/api/auth/logout')
+}

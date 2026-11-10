@@ -3,7 +3,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { Button } from '../shared/ui'
 
 export function AppLayout() {
-  const { user, isAuthenticated, signOut } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth()
 
   return (
     <div className="min-h-screen">
@@ -16,7 +16,7 @@ export function AppLayout() {
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-ink-muted sm:inline">Hi, {user?.name}</span>
-              <Button variant="ghost" onClick={() => signOut('manual')}>
+              <Button variant="ghost" onClick={() => void logout()}>
                 Log out
               </Button>
             </div>
