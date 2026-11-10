@@ -1,3 +1,18 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health          # expose ONLY health. /actuator/env, /heapdump etc. would leak secrets
+  endpoint:
+    health:
+      probes:
+        enabled: true            # adds /actuator/health/liveness and /actuator/health/readiness
+      show-details: never        # no DB version or disk details for the public
+      group:
+        readiness:
+          include: readinessState,db   # ready = the app started AND the DB answers
+        # liveness keeps its default (livenessState only): never restart the app because the DB is down
+
 server:
   port: 8091
 

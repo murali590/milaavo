@@ -47,7 +47,9 @@ public class SecurityConfig {
                                                                 "/api/auth/verify/resend-otp",
                                                                 "/api/auth/verify/start",
                                                                 "/api/auth/refresh",
-                                                                "/api/auth/logout")
+                                                                "/api/auth/logout",
+                                                                "/actuator/health",
+                                                                "/actuator/health/**")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2

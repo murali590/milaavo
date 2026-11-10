@@ -31,6 +31,12 @@ services:
       db:
         condition: service_healthy        # wait until Postgres is ready, not just started
     restart: unless-stopped               # if the app crashes, start it again
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8091/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s     # Spring needs time to start; failures in this window don't count
 
 volumes:
   pgdata:                                 # named volume: survives "docker compose down"
