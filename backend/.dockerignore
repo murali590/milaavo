@@ -1,0 +1,14 @@
+# Never send secrets into an image
+.env
+
+# Local build output and caches: the image builds its own
+build/
+.gradle/
+bin/
+out/
+
+# Editor and misc files
+.idea/
+.vscode/
+*.iml
+HELP.md

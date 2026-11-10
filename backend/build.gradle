@@ -36,3 +36,13 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Fixed name, so the Dockerfile doesn't depend on the version number.
+tasks.named('bootJar') {
+	archiveFileName = 'app.jar'
+}
+
+// We only need the runnable boot jar, not the extra "-plain" jar.
+tasks.named('jar') {
+	enabled = false
+}
