@@ -59,6 +59,7 @@ cp .env.example .env
 | `JWT_SECRET` | yes | **Base64**-encoded, at least 32 bytes after decoding. Startup fails otherwise (`JwtConfig`). |
 | `OTP_HMAC_SECRET` | yes | **Base64**-encoded, at least 32 bytes after decoding (`OtpConfig`). Use a different value from `JWT_SECRET`. |
 | `SMS_OUTBOX_ENCRYPTION_KEY` | yes | **Base64**, exactly 32 bytes decoded (AES-256). Encrypts SMS outbox messages. Use its own value, and never change it while SMS are pending |
+| `REFRESH_COOKIE_SECURE` | no | Default `true`. Set `false` only for local Safari over plain http |
 | `SPRING_PROFILES_ACTIVE` | yes | Use `local`. Today the only `SmsSender` implementation is `LocalSmsSender` (`@Profile("local")`), so any other profile fails at startup with a missing bean. |
 
 Generate secrets with:
@@ -123,6 +124,8 @@ Full contract, status codes and error codes: [docs/design/03-api.md](docs/design
 | POST | `/api/auth/verify/resend-otp` | public | Issue a new OTP (cooldown and window limits) |
 | POST | `/api/auth/verify/start` | public | Restart verification with mobile and password, for users who never finished it |
 | POST | `/api/auth/login` | public | Exchange mobile and password for a JWT |
+| POST | `/api/auth/refresh` | public (cookie) | New access token from the `HttpOnly` refresh cookie; rotates the cookie |
+| POST | `/api/auth/logout` | public (cookie) | Revoke the refresh token and clear the cookie |
 | POST | `/api/reports` | Bearer | Create a lost-item report |
 | GET | `/api/reports?page=&size=` | Bearer | My reports, paged, newest first |
 | GET | `/api/reports/{id}` | Bearer | Report detail |

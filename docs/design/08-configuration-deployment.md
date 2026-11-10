@@ -4,6 +4,7 @@
 
 - `application.yml` reads all secrets from environment variables: `DB_*`, `JWT_SECRET`, `OTP_HMAC_SECRET`. No secrets are committed.
 - `backend/scripts/run-local.sh` exports `backend/.env` (gitignored) and runs Gradle. Run it from `backend/`.
+- Refresh token: `app.refresh-token.ttl` (default `7d`) and `app.refresh-token.cookie-secure` from `REFRESH_COOKIE_SECURE` (default `true`; set `false` only for local Safari over plain http).
 - `OtpResendProperties` is a typed `@ConfigurationProperties` record. That is the pattern to copy for the remaining hard-coded values.
 - `JwtConfig` and `OtpConfig` **fail fast** at startup if a secret is shorter than 32 bytes. Configuration errors show up at deploy time, not on the first request.
 
@@ -43,6 +44,8 @@ A GitHub Actions workflow for every push and PR:
 Docker is a convenience here, not a prerequisite for learning the core Java and Spring material.
 
 ## Deployment checklist
+
+- [ ] **Refresh cookie and sites.** The cookie is `SameSite=Strict`, so the frontend and the API must be on the **same site** (same registrable domain, for example `app.example.com` and `api.example.com`, or one origin with `/api` proxied). Free hosts such as `*.vercel.app` and `*.onrender.com` are different sites, and the cookie would never be sent. Options: proxy `/api` through the frontend host (simplest), or a custom domain for both. Avoid `SameSite=None`: browsers increasingly block third-party cookies.
 
 - [ ] Build once and promote the same artifact (image digest) through environments.
 - [ ] Inject secrets from a secret manager (AWS Secrets Manager, GCP Secret Manager, Vault). Rotate `JWT_SECRET` with a documented plan: with HS256 and no `kid`, rotation logs everyone out, which is acceptable at a 15-minute TTL.

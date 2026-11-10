@@ -7,7 +7,10 @@ This page lists every transaction boundary in the code, what it protects, and th
 | Method | Annotation | Protects | Notes |
 |---|---|---|---|
 | `UserServiceImpl.register` | `@Transactional` | User + challenge + outbox row commit together | Joins `OtpServiceImpl.issueOtp` and `SmsOutboxService.enqueue` (`REQUIRED`) |
-| `UserServiceImpl.login` | `@Transactional(readOnly = true)` | Consistent read | `readOnly` lets Hibernate skip dirty checking |
+| `UserServiceImpl.login` | none (on purpose) | | The user lookup runs in the repository's own short transaction, BCrypt runs with no connection held (G-31), then `RefreshTokenService.issue` writes in its own transaction. A read-only transaction could not insert the refresh token |
+| `UserServiceImpl.refresh` | none (on purpose) | | An outer transaction would be rolled back by `InvalidRefreshTokenException` and undo the family revoke |
+| `RefreshTokenService.rotate` | `@Transactional(noRollbackFor = InvalidRefreshTokenException.class)` | Lock token → check → revoke → insert new token, atomically. The family revoke on reuse commits even though the method throws | `FOR UPDATE` on the token row |
+| `RefreshTokenService.issue` / `revoke` | `@Transactional` | Single insert / family revoke | |
 | `UserServiceImpl.verifyMobileOtp` | `@Transactional` | User activation | Calls `OtpVerificationTransaction.verify` (`REQUIRES_NEW`) |
 | `UserServiceImpl.resendVerificationOtp` | `@Transactional` | Rate-limit check + attempt insert + new OTP, atomically | `findByIdForUpdate` locks the user row |
 | `OtpServiceImpl.issueOtp` | `@jakarta.transaction.Transactional` | Supersede + insert + enqueue | Uses the JTA annotation, unlike the rest of the code (G-19). Spring honors it, but it lacks `readOnly`, isolation and similar attributes. Standardize on Spring's |
@@ -68,6 +71,7 @@ In `SmsOutboxClaimService`, the rows returned by the native query are managed en
 | Resend rate-limit race | `resendVerificationOtp` | Lock the parent user row to serialize | Advisory lock, or a unique `(user_id, time_bucket)` |
 | Queue claiming | outbox claim | `FOR UPDATE SKIP LOCKED` | Broker with visibility timeouts (SQS), or Kafka partitions |
 | Stale worker overwrite | outbox outcome | **Implemented (G-03):** claim token per claim + `SELECT … FOR UPDATE` on `(id, claim_token, status = PROCESSING)` before writing the result | `@Version` optimistic locking (native recovery query would need to bump the version too) |
+| Same refresh token used twice at once | `rotate` | `FOR UPDATE` on the token row: the second request waits, then sees it revoked (reuse) | Conditional `UPDATE … WHERE revoked_at IS NULL` and check the row count |
 | Concurrent report edits | `updateReport` | **None**, last write wins | `@Version` on `ItemReport` → 409 on conflict (P-2) |
 
 ### Pessimistic or optimistic locking?

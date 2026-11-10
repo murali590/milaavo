@@ -73,8 +73,8 @@ Anyone signed in can search public found reports by category, area and date, and
 | FR-AUTH-1 | Register with name, mobile number and password. Verify the mobile number with an OTP | M | **Implemented** |
 | FR-AUTH-2 | Log in, get a short-lived access token | M | **Implemented** (JWT, 15 min) |
 | FR-AUTH-3 | Resend OTP with cooldown and window limits | M | **Implemented** |
-| FR-AUTH-4 | Session persists in the web app across reloads: refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie, access token in memory | M | Proposed |
-| FR-AUTH-5 | Log out (revoke the refresh token) | M | Proposed |
+| FR-AUTH-4 | Session persists in the web app across reloads: refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie, access token in memory | M | **Implemented** (10 Nov 2026: rotation, reuse detection) |
+| FR-AUTH-5 | Log out (revoke the refresh token) | M | **Implemented** |
 | FR-AUTH-6 | Forgot password via OTP (`OtpPurpose.PASSWORD_RESET` already exists) | S | Proposed |
 | FR-AUTH-7 | Optional email on the profile, for demo-mode notifications | S | Proposed |
 | FR-AUTH-8 | Roles: `USER`, `MODERATOR`, `ADMIN` | S | Proposed |

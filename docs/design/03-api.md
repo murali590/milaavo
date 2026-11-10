@@ -30,6 +30,7 @@ Base URL (local): `http://localhost:8091`. All bodies are JSON. Routes are taken
 | `INVALID_VERIFICATION_REQUEST` | 400 | Verify or resend with a `userId` that doesn't exist |
 | `UNAUTHORIZED` | 401 | No token, or an invalid or expired token |
 | `INVALID_CREDENTIALS` | 401 | Login with an unknown mobile number or a wrong password (same message for both) |
+| `INVALID_REFRESH_TOKEN` | 401 | Refresh with a missing, unknown, expired, revoked or reused refresh token, or for a user who is no longer `ACTIVE` (one code for all, so nothing can be probed). Client should show the login page |
 | `FORBIDDEN` | 403 | A security access denial |
 | `MOBILE_NOT_VERIFIED` | 403 | Login with the correct password, but the mobile isn't verified yet. Client should call `POST /api/auth/verify/start` |
 | `ACCOUNT_DISABLED` | 403 | Login with the correct password, but the account is disabled |
@@ -123,7 +124,23 @@ Response:
 
 The password is checked **before** the account status, so the 403 for an unverified account is only returned to someone who knows the password.
 
+The response also sets the refresh-token cookie (see `/refresh` below). The access token goes in the body; the refresh token never does.
+
 Errors: 401 `INVALID_CREDENTIALS`, 403 `MOBILE_NOT_VERIFIED`, 403 `ACCOUNT_DISABLED`.
+
+### `POST /api/auth/refresh` → 200
+
+No body. The browser sends the `milaavo_rt` cookie by itself (the client must use `withCredentials: true`). **Do not send an `Authorization` header**: Spring validates any Bearer token it sees, even on public endpoints, so an expired one would give 401 before this endpoint runs.
+
+Response: the same body as login, with a new access token, and a **new** cookie. The old refresh token is revoked (rotation). If an already-revoked token is sent again, the whole login (token family) is revoked and the response is 401 (reuse detection).
+
+Cookie: `milaavo_rt=<opaque>; Path=/api/auth; Max-Age=604800; HttpOnly; Secure; SameSite=Strict`. `Secure` comes from `REFRESH_COOKIE_SECURE` (default `true`).
+
+Errors: 401 `INVALID_REFRESH_TOKEN`.
+
+### `POST /api/auth/logout` → 204
+
+No body, no access token needed (it may already be expired). Revokes the token family of the cookie and clears the cookie (`Max-Age=0`). Idempotent: no cookie or an unknown cookie still gives 204.
 
 ## Report endpoints (Bearer token required)
 

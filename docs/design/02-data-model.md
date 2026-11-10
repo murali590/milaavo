@@ -9,6 +9,7 @@ erDiagram
     app_user ||--o{ otp_challenge : "has"
     app_user ||--o{ otp_resend_attempt : "has"
     app_user ||--o{ item_report : "owns"
+    app_user ||--o{ refresh_token : "has"
     app_user {
         uuid id PK
         varchar name
@@ -144,6 +145,22 @@ Index: `idx_item_report_owner_created (owner_id, created_at)`. It serves the "my
 > Changeset 008 deleted the existing `lost_report` rows before adding the `NOT NULL` column. That's fine for local test data only. With real data, use **expand → migrate → contract**: add the column as nullable, fill it in, then make it `NOT NULL` in a later release.
 
 > Changeset numbering skips `005`. That is harmless, because Liquibase tracks changesets by id/author/file, not by number. Do not reuse 005 later, to avoid confusion.
+
+### `refresh_token` (changeset 014)
+
+One row per issued refresh token. See [04](04-auth-otp-security.md#refresh-tokens-implemented).
+
+| Column | Type | Constraint | Notes |
+|---|---|---|---|
+| `id` | UUID | PK `pk_refresh_token` | |
+| `user_id` | UUID | NOT NULL, FK `fk_refresh_token_user` → `app_user` | |
+| `token_hash` | VARCHAR(64) | NOT NULL, UNIQUE `uk_refresh_token_hash` | SHA-256 hex of the raw token. The raw token is never stored |
+| `family_id` | UUID | NOT NULL | Shared by all tokens from one login. Reuse revokes the family |
+| `expires_at` | TIMESTAMPTZ | NOT NULL | Issue time + 7 days |
+| `revoked_at` | TIMESTAMPTZ | nullable | Set on rotation, logout, reuse or a disabled account |
+| `created_at` | TIMESTAMPTZ | NOT NULL, default `CURRENT_TIMESTAMP` | |
+
+Indexes: `idx_refresh_token_family (family_id)` for revoking a family, `idx_refresh_token_user (user_id)` for "log out everywhere" later. The lookup by hash uses the unique constraint's index.
 
 ## Proposed schema changes
 

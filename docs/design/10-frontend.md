@@ -1,6 +1,6 @@
 # 10. Frontend (web app)
 
-*Started 25 Oct 2026. Status: F1–F7 done (7 Nov 2026); next is the refresh-token step, then F8. Product scope: [requirements](../product/requirements.md).*
+*Started 25 Oct 2026. Status: F1–F7 done (7 Nov 2026), refresh-token session done (10 Nov 2026); next is deployment, then F8. Product scope: [requirements](../product/requirements.md).*
 
 One responsive web app that works well in phone browsers. No native apps (see [vision](../product/vision.md#non-goals-for-now)).
 
@@ -43,7 +43,7 @@ One responsive web app that works well in phone browsers. No native apps (see [v
 
 ## Login token in the browser
 
-**Decision: keep the access token in memory only** (a React context), never in `localStorage`.
+**Decision: keep the access token in memory only** (an external store), never in `localStorage`. **The refresh token is an `HttpOnly` cookie** (done 10 Nov 2026), so a reload no longer logs the user out.
 
 | Option | Survives reload | Risk |
 |---|---|---|
@@ -51,7 +51,17 @@ One responsive web app that works well in phone browsers. No native apps (see [v
 | `localStorage` | Yes | Any injected script can read and send it anywhere. It stays there until removed |
 | `HttpOnly` cookie | Yes | JavaScript can't read it at all. Needs CSRF care and `allowCredentials` in CORS |
 
-Access tokens live 15 minutes, so losing them on reload is a small cost for now. **Planned improvement:** a refresh token in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie, issued by the backend (FR-AUTH-4/5). The page then gets a new access token after a reload without ever seeing the refresh token.
+How the session works now (`features/auth/sessionRefresh.ts`, `shared/api/http.ts`):
+
+| When | What happens |
+|---|---|
+| Page load | `restoreSession()` runs once from `main.tsx` (outside React, so StrictMode can't run it twice). `App` shows a spinner until it finishes, so route guards don't bounce a logged-in user to `/login` |
+| At 80% of the access token's life | A timer refreshes, only if the tab is visible. If the tab was hidden, it refreshes as soon as the tab becomes visible again. A hidden tab doesn't keep the session alive |
+| A call gets 401 | The response interceptor refreshes **once** (`_retried` marker) and retries the call. If the refresh fails → sign out with "session expired". Safety net for laptop sleep, throttled timers and revoked tokens |
+| Many calls need a refresh at once | All wait on **one** shared promise (single-flight). Two refreshes with the same cookie would look like reuse and end the session |
+| Log out | `POST /api/auth/logout` first (revokes and clears the cookie), then clear memory |
+
+Two rules in `http.ts`: `withCredentials: true` (needed to send and store the cookie cross-origin), and **no `Authorization` header on `/api/auth/*`**, because Spring rejects an expired Bearer token even on public endpoints.
 
 ## Folder structure (target)
 
@@ -106,6 +116,7 @@ frontend/
 | F5 | ✅ Login, logout, handle 401 | Session flow |
 | F6 | ✅ My reports list with paging | TanStack Query, loading and empty states |
 | F7 | ✅ Create, edit, delete report | Mutations, cache invalidation, zod rules matching the backend |
+| R | ✅ Refresh-token session: restore on reload, proactive + on-401 refresh, server logout | HttpOnly cookies, CORS credentials, single-flight |
 | F8 | Polish: mobile layout, accessibility, error and loading states | Responsive design, a11y basics |
 
 Notes from building it:
@@ -116,4 +127,4 @@ Notes from building it:
 - F7: reports have a type (Lost, Found, Swapped) with metadata in `REPORT_TYPE_INFO`; delete uses a native `<dialog>` and treats 404 as already deleted.
 - Adding or changing routes needs a full page reload in dev: `RouterProvider` keeps the router it started with.
 
-Next (with backend work): refresh-token cookie, so a reload doesn't log the user out. Later: found-item details, photos, matching and claims.
+Next: deployment (the cookie needs the frontend and API on the same site, see [08](08-configuration-deployment.md#deployment-checklist)), then F8. Later: found-item details, photos, matching and claims.

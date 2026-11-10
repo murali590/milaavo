@@ -114,19 +114,41 @@ The password requirement stops anyone from triggering SMS to another person's nu
 | Algorithm | HS256 (symmetric). The decoder is pinned to HS256, so `alg: none` or switching algorithms is rejected |
 | Key | `JWT_SECRET`, Base64, ≥ 32 bytes, checked at startup |
 | Claims | `iss=milaavo`, `sub=<userId>`, `iat`, `exp` |
-| Lifetime | 15 minutes, no refresh token |
+| Lifetime | 15 minutes. Renewed with a refresh token (below) |
 | Validation | Signature, `exp`/`nbf` (60 s clock skew) and **issuer** `iss = milaavo` (G-13, `JwtValidators.createDefaultWithIssuer(JwtConfig.ISSUER)`) |
-| Session | `STATELESS`, CSRF disabled (correct for bearer tokens sent in a header, not cookies) |
+| Session | `STATELESS`, CSRF disabled. Report APIs use a Bearer header, so CSRF doesn't apply. The only cookie (refresh token) is `SameSite=Strict`, which is the CSRF protection for `/refresh` and `/logout` |
 
 Gaps and proposals:
 
 - ✅ **Issuer validated (G-13, fixed 25 Oct 2026).** A token signed with our key but with another `iss` now gets 401. This prevents token confusion if the key is ever used for other token types. Tested with a hand-made token: `iss: someone-else` → 401, `iss: milaavo` → 200. Add an `aud` claim if more than one service ever shares a key.
-- **No revocation.** Logout, password change or a disabled account do not invalidate issued tokens for up to 15 minutes. That is acceptable at this lifetime. If it ever matters: add a `token_version` on the user and put it in a claim, or keep a short deny-list.
+- **No access-token revocation.** Logout and a disabled account revoke the refresh token at once, but an access token already issued stays valid for up to 15 minutes. That is acceptable at this lifetime. If it ever matters: add a `token_version` on the user and put it in a claim, or keep a short deny-list.
 - **No authorities.** Every authenticated user has the same rights. Add roles (`ROLE_USER`, `ROLE_ADMIN`) when admin features appear.
-- **Refresh tokens** (Proposed, only if the product needs long sessions): opaque, stored hashed, rotated on every use, with reuse detection that revokes the whole token family.
+- ✅ **Refresh tokens** (implemented 10 Nov 2026): see the next section.
 - **Key rotation.** Moving to RS256/ES256 with a `kid` header lets keys rotate without downtime and lets other services verify without the signing secret.
 
-## Authorization
+## Refresh tokens (Implemented)
+
+*Added 10 Nov 2026* (`RefreshTokenService`, `RefreshTokenCookie`, `AuthController`, changeset 014). This keeps a user logged in across page reloads without putting any token in `localStorage`.
+
+| Aspect | Choice | Why |
+|---|---|---|
+| Token | 32 random bytes from `SecureRandom`, Base64url | Opaque, not a JWT: it only means something to our database, so it can be revoked |
+| Storage | Only the **SHA-256** hex hash, in `refresh_token.token_hash` (unique) | A DB leak gives no usable tokens. BCrypt is not needed: the token has 256 bits of randomness, so it can't be guessed, and an unsalted hash lets us look the row up by hash |
+| Lifetime | 7 days (`app.refresh-token.ttl`) | Every rotation gives a fresh 7 days (sliding) |
+| Transport | `HttpOnly; Secure; SameSite=Strict; Path=/api/auth` cookie | JS can't read it (XSS can't steal it), it is not sent from other sites (CSRF), and it is not sent on report calls |
+| Rotation | Each `/refresh` revokes the presented token and issues a new one in the same **family** | A stolen token is useful for one use at most |
+| Reuse detection | A revoked token presented again → revoke the whole family → 401 | The real user and the thief can't both keep going. One of them tries an old token and the login ends for both |
+| Concurrency | `findByTokenHashForUpdate` (`FOR UPDATE`) | Two requests with the same token can't both rotate it |
+| Account state | `rotate` checks the user is still `ACTIVE`, else revokes the family | Disabling an account ends sessions within one access-token lifetime |
+| Logout | Revokes the family and clears the cookie. Public and idempotent | Works even when the access token has expired |
+
+**Transaction trap (and the fix).** On reuse, `rotate` revokes the family (an UPDATE) and then throws. By default Spring rolls back on a `RuntimeException`, which would undo the revoke. So `rotate` is `@Transactional(noRollbackFor = InvalidRefreshTokenException.class)`, and the callers (`UserServiceImpl.login`, `refresh`) have **no** outer `@Transactional`: an outer transaction would still be rolled back by the exception passing through it. This is the same idea as the OTP failed-attempt counter (`REQUIRES_NEW`).
+
+**CORS.** `allowCredentials(true)` is set. It is safe only because the allow-list holds exact origins and `CorsProperties` rejects `*`.
+
+**Frontend side** ([10](10-frontend.md)): restore the session on page load with `/refresh`; refresh at 80% of the token's life for visible tabs; on a 401, refresh once and retry; one shared (single-flight) refresh promise, so parallel calls don't look like reuse.
+
+Open items: G-32 (absolute session limit), G-33 (two tabs refreshing at the same moment), G-34 (old rows are never deleted).
 
 **Report ownership (G-06, fixed). Implemented.**
 
