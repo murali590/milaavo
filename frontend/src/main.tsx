@@ -6,7 +6,7 @@ import App from './App.tsx'
 import { configureHttp } from './shared/api/http'
 import { sessionStore } from './features/auth/sessionStore.ts'
 import { queryClient } from './app/queryClient'
-import { refreshAccessToken, restoreSession } from './features/auth/sessionRefresh'
+import { refreshAccessToken, restoreSession, startProactiveRefresh } from './features/auth/sessionRefresh'
 
 // Connect the HTTP client to the session once, before anything renders.
 configureHttp({
@@ -15,6 +15,7 @@ configureHttp({
   onUnauthorized: () => sessionStore.signOut('expired'),
 })
 
+startProactiveRefresh()
 void restoreSession()
 
 // Cached data belongs to one user: never let the next user on this browser see it.
