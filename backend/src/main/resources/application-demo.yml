@@ -3,3 +3,8 @@
 app:
   demo:
     show-otp: true
+    # Public on purpose: anyone can use this account to look around. Fake data only.
+    account:
+      name: Demo User
+      mobile-number: "+919999900001"
+      password: milaavo-demo-2026

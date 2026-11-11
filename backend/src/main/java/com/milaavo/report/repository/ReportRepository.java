@@ -17,4 +17,6 @@ public interface ReportRepository extends JpaRepository<ItemReport, UUID> {
     Page<ItemReport> findByOwnerId(UUID ownerId, Pageable pageable);
 
     Page<ItemReport> findByOwnerIdAndType(UUID ownerId, ReportType type, Pageable pageable);
+
+    long countByOwnerId(UUID ownerId);
 }

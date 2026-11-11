@@ -27,6 +27,10 @@ function loginErrorMessage(error: unknown): string {
   }
 }
 
+// Shown only when the demo build sets these values.
+const DEMO_MOBILE = import.meta.env.VITE_DEMO_MOBILE
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD
+
 export function LoginPage() {
   const { endReason, signIn } = useAuth()
   const navigate = useNavigate()
@@ -37,6 +41,7 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -73,9 +78,24 @@ export function LoginPage() {
     }
   }
 
+  function fillDemoAccount() {
+    if (DEMO_MOBILE && DEMO_PASSWORD) {
+      reset({ mobileNumber: DEMO_MOBILE, password: DEMO_PASSWORD })
+    }
+  }
+
   return (
     <Card className="mx-auto max-w-sm space-y-5">
       <h1 className="text-xl font-semibold">Log in</h1>
+
+      {DEMO_MOBILE && DEMO_PASSWORD && (
+        <Alert tone="info" title="Just looking around?">
+          <p>Use the shared demo account. It has sample reports, and you can't break anything.</p>
+          <Button type="button" variant="ghost" className="mt-2 -ml-3" onClick={fillDemoAccount}>
+            Use demo account
+          </Button>
+        </Alert>
+      )}
 
       {navState?.verifiedMobile && (
         <Alert tone="success">{navState.verifiedMobile} is verified. Please log in.</Alert>
