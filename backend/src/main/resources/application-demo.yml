@@ -1,0 +1,5 @@
+# Free public demo: no real SMS provider. The OTP is logged and also returned in the API
+# response, so visitors can finish registration. Never use this profile with real users.
+app:
+  demo:
+    show-otp: true

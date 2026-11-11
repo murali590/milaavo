@@ -36,6 +36,7 @@ function VerifyMobileForm({ registration }: { registration: VerifyMobileState })
   const [pageAlert, setPageAlert] = useState<PageAlert | null>(null)
   const [resending, setResending] = useState(false)
   const { secondsLeft, restart } = useCountdown(RESEND_COOLDOWN_SECONDS)
+  const [demoOtp, setDemoOtp] = useState(registration.demoOtp)
 
   const {
     register,
@@ -90,6 +91,7 @@ function VerifyMobileForm({ registration }: { registration: VerifyMobileState })
       const response = await resendVerificationOtp(registration.userId)
       // The old OTP no longer works: always verify against the newest challenge.
       setChallengeId(response.challengeId)
+      setDemoOtp(response.demoOtp)
       reset({ otp: '' })
       restart(RESEND_COOLDOWN_SECONDS)
       setPageAlert({ tone: 'info', message: `We sent a new OTP to ${registration.mobileNumber}.` })
@@ -112,6 +114,13 @@ function VerifyMobileForm({ registration }: { registration: VerifyMobileState })
       </div>
 
       {pageAlert && <Alert tone={pageAlert.tone}>{pageAlert.message}</Alert>}
+
+      {demoOtp && (
+        <Alert tone="warning" title="Demo mode">
+          No real SMS is sent. Your OTP is{' '}
+          <span className="font-mono text-base font-semibold tracking-widest text-ink">{demoOtp}</span>
+        </Alert>
+      )}
 
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
         <TextField

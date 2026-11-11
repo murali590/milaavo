@@ -3,6 +3,7 @@ package com.milaavo.otp.service.impl;
 
 import com.milaavo.auth.entity.User;
 import com.milaavo.auth.repository.UserRepository;
+import com.milaavo.config.DemoProperties;
 import com.milaavo.notification.sms.event.OtpSmsEvent;
 import com.milaavo.notification.sms.service.SmsOutboxService;
 import com.milaavo.notification.sms.service.SmsSender;
@@ -21,6 +22,10 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.milaavo.otp.service.IssuedOtp;
 
 @Service
 public class OtpServiceImpl implements OtpService {
@@ -37,6 +42,10 @@ public class OtpServiceImpl implements OtpService {
     private final SmsSender smsSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
+    private static final Logger log = LoggerFactory.getLogger(OtpServiceImpl.class);
+
+    private final DemoProperties demoProperties;
+
     public OtpServiceImpl(
             OtpVerificationTransaction otpVerificationTransaction,
             OtpChallengeRepository otpRepository,
@@ -44,7 +53,8 @@ public class OtpServiceImpl implements OtpService {
             SmsSender smsSender,
             OtpHasher otpHasher,
             ApplicationEventPublisher eventPublisher,
-            SmsOutboxService smsOutboxService) {
+            SmsOutboxService smsOutboxService,
+            DemoProperties demoProperties) {
         this.otpVerificationTransaction = otpVerificationTransaction;
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
@@ -52,11 +62,15 @@ public class OtpServiceImpl implements OtpService {
         this.otpHasher = otpHasher;
         this.eventPublisher = eventPublisher;
         this.smsOutboxService = smsOutboxService;
+        this.demoProperties = demoProperties;
+        if (demoProperties.showOtp()) {
+            log.warn("DEMO MODE: OTPs are returned in API responses. Never enable this with real users");
+        }
     }
 
     @Override
     @Transactional
-    public UUID issueOtp(
+    public IssuedOtp issueOtp(
             UUID userId,
             OtpPurpose purpose,
             String mobileNumber) {
@@ -87,7 +101,8 @@ public class OtpServiceImpl implements OtpService {
         smsOutboxService.enqueue(mobileNumber, "Your Milaavo verification code is " + otp
                 + ". It expires in 5 minutes.", challenge.getExpiresAt());
 
-        return savedChallenge.getId();
+        String demoOtp = demoProperties.showOtp() ? otp : null;
+        return new IssuedOtp(savedChallenge.getId(), demoOtp);
 
     }
 
@@ -114,7 +129,8 @@ public class OtpServiceImpl implements OtpService {
             case INVALID, CHALLENGE_NOT_FOUND ->
                 throw new InvalidOtpException("INVALID_OTP", "Invalid OTP");
             case SUPERSEDED ->
-                throw new InvalidOtpException("SUPERSEDED", "This OTP is no longer valid. Please use the latest OTP sent to your mobile");
+                throw new InvalidOtpException("SUPERSEDED",
+                        "This OTP is no longer valid. Please use the latest OTP sent to your mobile");
             default ->
                 throw new IllegalStateException("Unexpected OTP verification result: " + result);
         }

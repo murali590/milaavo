@@ -14,11 +14,9 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.access.AccessDeniedException;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,6 +29,7 @@ import com.milaavo.otp.config.OtpResendProperties;
 import com.milaavo.otp.entity.OtpResendAttempt;
 import com.milaavo.otp.enums.OtpPurpose;
 import com.milaavo.otp.repository.OtpResendAttemptRepository;
+import com.milaavo.otp.service.IssuedOtp;
 import com.milaavo.otp.service.OtpService;
 
 import com.milaavo.auth.dto.ResentVerificationOTPRequest;
@@ -84,7 +83,7 @@ public class UserServiceImpl implements UserService {
                         throw ex;
                 }
 
-                UUID challengeId = otpService.issueOtp(
+                IssuedOtp issuedOtp = otpService.issueOtp(
                                 savedUser.getId(),
                                 OtpPurpose.MOBILE_VERIFICATION,
                                 savedUser.getMobileNumber());
@@ -96,7 +95,8 @@ public class UserServiceImpl implements UserService {
                                 .mobileVerified(savedUser.isMobileVerified())
                                 .status(savedUser.getStatus())
                                 .createdAt(savedUser.getCreatedAt())
-                                .challengeId(challengeId)
+                                .challengeId(issuedOtp.challengeId())
+                                .demoOtp(issuedOtp.demoOtp())
                                 .build();
         }
 
@@ -183,10 +183,11 @@ public class UserServiceImpl implements UserService {
                                 .orElseThrow(() -> new InvalidVerificationRequestException(
                                                 "Invalid verification request"));
 
-                UUID challengeId = issueVerificationOtp(user);
+                IssuedOtp issuedOtp = issueVerificationOtp(user);
 
                 return ResentVerificationOTPResponse.builder()
-                                .challengeId(challengeId)
+                                .challengeId(issuedOtp.challengeId())
+                                .demoOtp(issuedOtp.demoOtp())
                                 .build();
         }
 
@@ -210,11 +211,12 @@ public class UserServiceImpl implements UserService {
                                 .orElseThrow(() -> new BadCredentialsException(
                                                 "Invalid mobile number or password"));
 
-                UUID challengeId = issueVerificationOtp(user);
+                IssuedOtp issuedOtp = issueVerificationOtp(user);
 
                 return StartVerificationResponse.builder()
                                 .userId(user.getId())
-                                .challengeId(challengeId)
+                                .challengeId(issuedOtp.challengeId())
+                                .demoOtp(issuedOtp.demoOtp())
                                 .mobileNumber(user.getMobileNumber())
                                 .build();
         }
@@ -222,7 +224,7 @@ public class UserServiceImpl implements UserService {
         // Shared by resend and start: the caller must have locked the user row
         // (findByIdForUpdate),
         // so two parallel requests can't both pass the cooldown and window checks.
-        private UUID issueVerificationOtp(User user) {
+        private IssuedOtp issueVerificationOtp(User user) {
                 if (user.isMobileVerified()
                                 || user.getStatus() != UserStatus.PENDING_VERIFICATION) {
                         throw new UserAlreayActiveException(

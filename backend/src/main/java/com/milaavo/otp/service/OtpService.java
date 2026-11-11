@@ -7,7 +7,8 @@ import java.util.UUID;
 
 public interface OtpService {
 
-    UUID issueOtp(UUID userId, OtpPurpose purpose, String mobileNumber);
+    IssuedOtp issueOtp(UUID userId, OtpPurpose purpose, String mobileNumber);
 
     void verifyOtp(UUID userId, UUID challengeId, OtpPurpose purpose, String otp);
+
 }

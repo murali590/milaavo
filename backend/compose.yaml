@@ -25,6 +25,7 @@ services:
     env_file: .env                        # secrets at run time, not in the image
     environment:
       DB_URL: jdbc:postgresql://db:5432/milaavo   # "db" = the service name above (compose DNS)
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}   # shell value wins over .env
     ports:
       - "8091:8091"
     depends_on:

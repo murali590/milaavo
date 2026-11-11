@@ -35,6 +35,7 @@ export type RegisterResponse = {
   name: string
   mobileNumber: string
   mobileVerified: boolean
+  demoOtp?: string
   status: string
   createdAt: string
   challengeId: string
@@ -48,6 +49,7 @@ export type VerifyMobileRequest = {
 
 export type ResendOtpResponse = {
   challengeId: string
+  demoOtp?: string
 }
 
 // Passed from the register page to the OTP page through navigation state.
@@ -55,6 +57,7 @@ export type VerifyMobileState = {
   userId: string
   challengeId: string
   mobileNumber: string
+  demoOtp?: string
 }
 
 // Why the last session ended, so the login page can explain it.

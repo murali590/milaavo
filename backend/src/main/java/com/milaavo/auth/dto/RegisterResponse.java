@@ -1,6 +1,7 @@
 
 package com.milaavo.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.milaavo.auth.enums.UserStatus;
 import lombok.Builder;
 import lombok.Data;
@@ -23,4 +24,7 @@ public class RegisterResponse {
     private UserStatus status;
     private Instant createdAt;
     private UUID challengeId;
+        // Only in demo mode (app.demo.show-otp=true). Left out of the JSON otherwise.
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String demoOtp;
 }

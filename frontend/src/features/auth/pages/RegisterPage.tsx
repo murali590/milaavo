@@ -41,6 +41,7 @@ export function RegisterPage() {
         userId: response.userId,
         challengeId: response.challengeId,
         mobileNumber: response.mobileNumber,
+        demoOtp: response.demoOtp,
       }
       navigate('/verify-mobile', { state })
     } catch (error) {
