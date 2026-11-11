@@ -1,182 +1,169 @@
-
 package com.milaavo.report.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.milaavo.common.security.AuthUser;
+import com.milaavo.common.security.AuthUserJwtConverter;
+import com.milaavo.config.ApiSecurityErrorHandler;
+import com.milaavo.config.CorsProperties;
+import com.milaavo.config.SecurityConfig;
+import com.milaavo.exception.ReportNotFoundException;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
-import com.milaavo.exception.GlobalExceptionHandler;
-import com.milaavo.exception.ReportNotFoundException;
+import com.milaavo.report.dto.PagedResponse;
+import com.milaavo.report.enums.ReportType;
 import com.milaavo.report.service.ReportService;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ReportController.class)
-@Import(GlobalExceptionHandler.class)
+@WebMvcTest(controllers = ReportController.class, properties = "spring.profiles.active=test")
+@Import({ SecurityConfig.class, ApiSecurityErrorHandler.class, AuthUserJwtConverter.class })
+@EnableConfigurationProperties(CorsProperties.class)
 class ReportControllerTest {
+
+    private static final String TOKEN = "test-token";
 
     @Autowired
     private MockMvc mockMvc;
 
-   private final ObjectMapper objectMapper = new ObjectMapper();
-
     @MockitoBean
     private ReportService reportService;
 
-    private final UUID reportId =
-            UUID.fromString("2679d0f4-f0b4-4388-8fec-239d42637004");
+    // Fake the signature check only. Our real SecurityConfig and AuthUserJwtConverter still run.
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
+    private final AuthUser me = new AuthUser(UUID.randomUUID());
+    private final UUID reportId = UUID.randomUUID();
+
+    @BeforeEach
+    void setUp() {
+        Jwt jwt = Jwt.withTokenValue(TOKEN)
+                .header("alg", "HS256")
+                .subject(me.userId().toString())
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(900))
+                .build();
+        when(jwtDecoder.decode(TOKEN)).thenReturn(jwt);
+    }
 
     @Test
-    void createReport_shouldReturn201() throws Exception {
-        CreateReportRequest request = createRequest();
-        CreateReportResponse response = createResponse();
+    void noToken_gives401InOurErrorShape() throws Exception {
+        mockMvc.perform(get("/api/reports"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
 
-        when(reportService.createReport(any(CreateReportRequest.class)))
-                .thenReturn(response);
+        verifyNoInteractions(reportService);
+    }
+
+    @Test
+    void createReport_passesLoggedInUserToService_andReturns201() throws Exception {
+        when(reportService.createReport(eq(me), any(CreateReportRequest.class))).thenReturn(response());
 
         mockMvc.perform(post("/api/reports")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content("""
+                                { "type": "LOST", "itemName": "Black wallet",
+                                  "description": "Leather wallet", "city": "Bengaluru" }
+                                """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reportId").value(reportId.toString()))
-                .andExpect(jsonPath("$.itemName").value("Black wallet"))
-                .andExpect(jsonPath("$.status").value("REPORTED"));
+                .andExpect(jsonPath("$.type").value("LOST"));
+
+        verify(reportService).createReport(eq(me), any(CreateReportRequest.class));
     }
 
     @Test
-    void createReport_shouldReturn400ForInvalidRequest() throws Exception {
-        String invalidRequest = """
-                {
-                    "itemName": " ",
-                    "description": "Leather wallet",
-                    "city": "Bengaluru"
-                }
-                """;
-
+    void createReport_withBlankNameAndNoType_gives400WithFieldErrors() throws Exception {
         mockMvc.perform(post("/api/reports")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalidRequest))
+                        .content("""
+                                { "itemName": " ", "description": "Leather wallet", "city": "Bengaluru" }
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.fieldErrors.itemName")
-                        .value("Item name is required"));
+                .andExpect(jsonPath("$.fieldErrors.itemName").value("Item name is required"))
+                .andExpect(jsonPath("$.fieldErrors.type").value("Report type is required"));
+
+        verifyNoInteractions(reportService);
     }
 
     @Test
-    void getReportById_shouldReturn200() throws Exception {
-        when(reportService.getReportById(reportId))
-                .thenReturn(createResponse());
+    void getAllReports_passesTypeFilter() throws Exception {
+        when(reportService.getAllReports(me, ReportType.FOUND, 0, 10))
+                .thenReturn(new PagedResponse<>(List.of(response()), 0, 10, 1, 1, true, true));
 
-        mockMvc.perform(get("/api/reports/{id}", reportId))
+        mockMvc.perform(get("/api/reports")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                        .param("type", "FOUND"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reportId").value(reportId.toString()))
-                .andExpect(jsonPath("$.itemName").value("Black wallet"));
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
-    void getReportById_shouldReturn404WhenMissing() throws Exception {
-        when(reportService.getReportById(reportId))
-                .thenThrow(new ReportNotFoundException(reportId));
+    void getAllReports_withSizeOver100_gives400() throws Exception {
+        mockMvc.perform(get("/api/reports")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                        .param("size", "101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
 
-        mockMvc.perform(get("/api/reports/{id}", reportId))
+    @Test
+    void getReportById_withNonUuid_gives400() throws Exception {
+        mockMvc.perform(get("/api/reports/not-a-uuid")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_PARAMETER"));
+    }
+
+    @Test
+    void deleteReport_notMineOrMissing_gives404() throws Exception {
+        doThrow(new ReportNotFoundException(reportId)).when(reportService).deleteReport(me, reportId);
+
+        mockMvc.perform(delete("/api/reports/{id}", reportId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("REPORT_NOT_FOUND"));
     }
 
     @Test
-    void updateReport_shouldReturn200() throws Exception {
-        CreateReportRequest request = createRequest();
-        CreateReportResponse response = new CreateReportResponse(
-                reportId,
-                "Blue wallet",
-                "Wallet with bank cards",
-                "Mysuru",
-                "REPORTED"
-        );
-
-        when(reportService.updateReport(eq(reportId), any(CreateReportRequest.class)))
-                .thenReturn(response);
-
-        mockMvc.perform(put("/api/reports/{id}", reportId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itemName").value("Blue wallet"))
-                .andExpect(jsonPath("$.city").value("Mysuru"));
-    }
-
-    @Test
-    void deleteReport_shouldReturn204() throws Exception {
-        doNothing().when(reportService).deleteReport(reportId);
-
-        mockMvc.perform(delete("/api/reports/{id}", reportId))
+    void deleteReport_mine_gives204() throws Exception {
+        mockMvc.perform(delete("/api/reports/{id}", reportId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
                 .andExpect(status().isNoContent());
 
-        verify(reportService).deleteReport(reportId);
+        verify(reportService).deleteReport(me, reportId);
     }
 
-    @Test
-void getAllReports_shouldReturn400ForNegativePage() throws Exception {
-    mockMvc.perform(get("/api/reports")
-                    .param("page", "-1"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-}
-
-@Test
-void getAllReports_shouldReturn400WhenSizeExceeds100() throws Exception {
-    mockMvc.perform(get("/api/reports")
-                    .param("size", "101"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-}
-
-    @Test
-    void deleteReport_shouldReturn404WhenReportDoesNotExist() throws Exception {
-        doThrow(new ReportNotFoundException(reportId))
-                .when(reportService).deleteReport(reportId);
-
-        mockMvc.perform(delete("/api/reports/{id}", reportId))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("REPORT_NOT_FOUND"));
-    }
-
-    private CreateReportRequest createRequest() {
-        CreateReportRequest request = new CreateReportRequest();
-        request.setItemName("Black wallet");
-        request.setDescription("Leather wallet");
-        request.setCity("Bengaluru");
-        return request;
-    }
-
-    private CreateReportResponse createResponse() {
-        return new CreateReportResponse(
-                reportId,
-                "Black wallet",
-                "Leather wallet",
-                "Bengaluru",
-                "REPORTED"
-        );
+    private CreateReportResponse response() {
+        return new CreateReportResponse(reportId, ReportType.LOST, "Black wallet", "Leather wallet",
+                "Bengaluru", "REPORTED", Instant.parse("2026-11-11T05:00:00Z"));
     }
 }

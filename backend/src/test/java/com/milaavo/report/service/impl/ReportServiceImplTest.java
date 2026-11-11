@@ -1,29 +1,35 @@
 package com.milaavo.report.service.impl;
 
+import com.milaavo.common.security.AuthUser;
+import com.milaavo.exception.ReportNotFoundException;
 import com.milaavo.report.dto.CreateReportRequest;
 import com.milaavo.report.dto.CreateReportResponse;
 import com.milaavo.report.dto.PagedResponse;
 import com.milaavo.report.entity.ItemReport;
-import com.milaavo.exception.ReportNotFoundException;
+import com.milaavo.report.enums.ReportType;
 import com.milaavo.report.repository.ReportRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ReportServiceImplTest {
@@ -34,189 +40,117 @@ class ReportServiceImplTest {
     @InjectMocks
     private ReportServiceImpl reportService;
 
-    private UUID reportId;
-    private ItemReport existingReport;
+    private final AuthUser me = new AuthUser(UUID.randomUUID());
+    private final UUID reportId = UUID.randomUUID();
+    private ItemReport myReport;
 
     @BeforeEach
     void setUp() {
-        reportId = UUID.randomUUID();
-
-        existingReport = new ItemReport();
-        existingReport.setId(reportId);
-        existingReport.setItemName("Black wallet");
-        existingReport.setDescription("Leather wallet");
-        existingReport.setCity("Bengaluru");
-        existingReport.setStatus("REPORTED");
+        myReport = new ItemReport();
+        myReport.setId(reportId);
+        myReport.setOwnerId(me.userId());
+        myReport.setType(ReportType.LOST);
+        myReport.setItemName("Black wallet");
+        myReport.setDescription("Leather wallet");
+        myReport.setCity("Bengaluru");
+        myReport.setStatus("REPORTED");
     }
 
     @Test
-    void createReport_shouldSaveAndReturnReport() {
-        CreateReportRequest request = new CreateReportRequest();
-        request.setItemName("Black wallet");
-        request.setDescription("Leather wallet");
-        request.setCity("Bengaluru");
+    void createReport_setsOwnerFromLoggedInUser() {
+        when(reportRepository.saveAndFlush(any(ItemReport.class)))
+                .thenAnswer(call -> call.getArgument(0));
 
-        when(reportRepository.save(any(ItemReport.class)))
-                .thenAnswer(invocation -> {
-                    ItemReport report = invocation.getArgument(0);
-                    report.setId(reportId);
-                    return report;
-                });
+        CreateReportResponse response = reportService.createReport(me, request(ReportType.FOUND, "Blue bottle"));
 
-        CreateReportResponse response = reportService.createReport(request);
-
-        assertEquals(reportId, response.reportId());
-        assertEquals("Black wallet", response.itemName());
-        assertEquals("Leather wallet", response.description());
-        assertEquals("Bengaluru", response.city());
-        assertEquals("REPORTED", response.status());
-
-        verify(reportRepository).save(any(ItemReport.class));
+        ArgumentCaptor<ItemReport> saved = ArgumentCaptor.forClass(ItemReport.class);
+        verify(reportRepository).saveAndFlush(saved.capture());
+        assertEquals(me.userId(), saved.getValue().getOwnerId());
+        assertEquals("REPORTED", saved.getValue().getStatus());
+        assertEquals(ReportType.FOUND, response.type());
+        assertEquals("Blue bottle", response.itemName());
     }
 
     @Test
-    void updateReport_shouldUpdateExistingReport() {
-        CreateReportRequest request = new CreateReportRequest();
-        request.setItemName("Blue wallet");
-        request.setDescription("Wallet with bank cards");
-        request.setCity("Mysuru");
+    void getAllReports_withoutType_listsOnlyMyReportsNewestFirst() {
+        when(reportRepository.findByOwnerId(eq(me.userId()), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(myReport)));
 
-        when(reportRepository.findById(reportId))
-                .thenReturn(Optional.of(existingReport));
-        when(reportRepository.save(any(ItemReport.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        PagedResponse<CreateReportResponse> page = reportService.getAllReports(me, null, 0, 10);
 
-        CreateReportResponse response =
-                reportService.updateReport(reportId, request);
-
-        assertEquals(reportId, response.reportId());
-        assertEquals("Blue wallet", response.itemName());
-        assertEquals("Wallet with bank cards", response.description());
-        assertEquals("Mysuru", response.city());
-        assertEquals("REPORTED", response.status());
-
-        verify(reportRepository).findById(reportId);
-        verify(reportRepository).save(existingReport);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(reportRepository).findByOwnerId(eq(me.userId()), pageable.capture());
+        assertEquals(Sort.by("createdAt").descending(), pageable.getValue().getSort());
+        assertEquals(1, page.content().size());
+        verify(reportRepository, never()).findByOwnerIdAndType(any(), any(), any());
     }
 
     @Test
-    void updateReport_shouldThrowWhenReportDoesNotExist() {
-        UUID missingId = UUID.randomUUID();
+    void getAllReports_withType_usesTypeFilter() {
+        when(reportRepository.findByOwnerIdAndType(eq(me.userId()), eq(ReportType.LOST), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(myReport)));
 
-        CreateReportRequest request = new CreateReportRequest();
-        request.setItemName("Blue wallet");
-        request.setDescription("Wallet with bank cards");
-        request.setCity("Mysuru");
+        PagedResponse<CreateReportResponse> page = reportService.getAllReports(me, ReportType.LOST, 0, 10);
 
-        when(reportRepository.findById(missingId))
-                .thenReturn(Optional.empty());
-
-        assertThrows(
-                ReportNotFoundException.class,
-                () -> reportService.updateReport(missingId, request)
-        );
-
-        verify(reportRepository, never()).save(any(ItemReport.class));
+        assertEquals(ReportType.LOST, page.content().get(0).type());
+        verify(reportRepository, never()).findByOwnerId(any(), any());
     }
 
     @Test
-    void deleteReport_shouldDeleteExistingReport() {
-        when(reportRepository.findById(reportId))
-                .thenReturn(Optional.of(existingReport));
+    void getReportById_ofSomeoneElse_isNotFound() {
+        // The repository only finds by (id, ownerId), so another user's report looks missing.
+        when(reportRepository.findByIdAndOwnerId(reportId, me.userId())).thenReturn(Optional.empty());
 
-        reportService.deleteReport(reportId);
-
-        verify(reportRepository).findById(reportId);
-        verify(reportRepository).delete(existingReport);
+        assertThrows(ReportNotFoundException.class, () -> reportService.getReportById(me, reportId));
     }
 
     @Test
-    void deleteReport_shouldThrowWhenReportDoesNotExist() {
-        UUID missingId = UUID.randomUUID();
+    void updateReport_ofSomeoneElse_isNotFoundAndNothingSaved() {
+        when(reportRepository.findByIdAndOwnerId(reportId, me.userId())).thenReturn(Optional.empty());
 
-        when(reportRepository.findById(missingId))
-                .thenReturn(Optional.empty());
+        assertThrows(ReportNotFoundException.class,
+                () -> reportService.updateReport(me, reportId, request(ReportType.LOST, "Changed")));
 
-        assertThrows(
-                ReportNotFoundException.class,
-                () -> reportService.deleteReport(missingId)
-        );
-
-        verify(reportRepository, never()).delete(any(ItemReport.class));
+        verify(reportRepository, never()).save(any());
     }
 
     @Test
-void getReportById_shouldReturnReportWhenItExists() {
-    when(reportRepository.findById(reportId))
-            .thenReturn(Optional.of(existingReport));
+    void updateReport_ofMine_changesFields() {
+        when(reportRepository.findByIdAndOwnerId(reportId, me.userId())).thenReturn(Optional.of(myReport));
+        when(reportRepository.save(myReport)).thenReturn(myReport);
 
-    CreateReportResponse response = reportService.getReportById(reportId);
+        CreateReportResponse response = reportService.updateReport(me, reportId,
+                request(ReportType.SWAPPED, "Grey laptop bag"));
 
-    assertEquals(reportId, response.reportId());
-    assertEquals("Black wallet", response.itemName());
-    assertEquals("Leather wallet", response.description());
-    assertEquals("Bengaluru", response.city());
-    assertEquals("REPORTED", response.status());
+        assertEquals("Grey laptop bag", response.itemName());
+        assertEquals(ReportType.SWAPPED, response.type());
+        assertEquals(me.userId(), myReport.getOwnerId()); // owner never changes
+    }
 
-    verify(reportRepository).findById(reportId);
-}
+    @Test
+    void deleteReport_ofSomeoneElse_isNotFoundAndNothingDeleted() {
+        when(reportRepository.findByIdAndOwnerId(reportId, me.userId())).thenReturn(Optional.empty());
 
-@Test
-void getReportById_shouldThrowWhenReportDoesNotExist() {
-    UUID missingId = UUID.randomUUID();
+        assertThrows(ReportNotFoundException.class, () -> reportService.deleteReport(me, reportId));
 
-    when(reportRepository.findById(missingId))
-            .thenReturn(Optional.empty());
+        verify(reportRepository, never()).delete(any());
+    }
 
-    assertThrows(
-            ReportNotFoundException.class,
-            () -> reportService.getReportById(missingId)
-    );
+    @Test
+    void deleteReport_ofMine_deletesIt() {
+        when(reportRepository.findByIdAndOwnerId(reportId, me.userId())).thenReturn(Optional.of(myReport));
 
-    verify(reportRepository).findById(missingId);
-}
+        reportService.deleteReport(me, reportId);
 
-@Test
-void getAllReports_shouldReturnReportsWithPaginationMetadata() {
-    Pageable pageable = PageRequest.of(0, 10);
-    Page<ItemReport> reportPage =
-            new PageImpl<>(List.of(existingReport), pageable, 1);
+        verify(reportRepository).delete(myReport);
+    }
 
-    when(reportRepository.findAll(any(Pageable.class)))
-            .thenReturn(reportPage);
-
-    PagedResponse<CreateReportResponse> response =
-            reportService.getAllReports(0, 10);
-
-    assertEquals(1, response.content().size());
-    assertEquals(reportId, response.content().get(0).reportId());
-    assertEquals(0, response.page());
-    assertEquals(10, response.size());
-    assertEquals(1, response.totalElements());
-    assertEquals(1, response.totalPages());
-    assertTrue(response.first());
-    assertTrue(response.last());
-
-    verify(reportRepository).findAll(any(Pageable.class));
-}
-
-@Test
-void getAllReports_shouldReturnEmptyPageWhenNoReportsExist() {
-    Pageable pageable = PageRequest.of(0, 10);
-    Page<ItemReport> emptyPage =
-            new PageImpl<>(List.of(), pageable, 0);
-
-    when(reportRepository.findAll(any(Pageable.class)))
-            .thenReturn(emptyPage);
-
-    PagedResponse<CreateReportResponse> response =
-            reportService.getAllReports(0, 10);
-
-    assertTrue(response.content().isEmpty());
-    assertEquals(0, response.totalElements());
-    assertEquals(0, response.totalPages());
-    assertTrue(response.first());
-    assertTrue(response.last());
-}
-
+    private static CreateReportRequest request(ReportType type, String itemName) {
+        return CreateReportRequest.builder()
+                .type(type)
+                .itemName(itemName)
+                .description("Some description")
+                .city("Bengaluru")
+                .build();
+    }
 }

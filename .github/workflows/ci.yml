@@ -37,11 +37,35 @@ jobs:
       - run: npm run build
 
   backend:
-    name: Backend (compile, package)
+    name: Backend (build and test)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+
+    # A throwaway Postgres, like the "db" service in compose.yaml. Deleted when the job ends.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: milaavo
+          POSTGRES_USER: milaavo
+          POSTGRES_PASSWORD: milaavo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U milaavo -d milaavo"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/milaavo
+      DB_USERNAME: milaavo
+      DB_PASSWORD: milaavo
+      # "local" gives the LocalSmsSender bean, so no real SMS provider is needed.
+      SPRING_PROFILES_ACTIVE: local
+
     steps:
       - uses: actions/checkout@v4
 
@@ -53,8 +77,24 @@ jobs:
       # Caches Gradle downloads, and checks that gradle-wrapper.jar is the genuine one.
       - uses: gradle/actions/setup-gradle@v4
 
-      # TODO (D4b): replace with "./gradlew build" once the stale tests are rewritten.
-      - run: ./gradlew --no-daemon compileJava bootJar
+      # New random keys every run: nothing to store, nothing to leak.
+      - name: Generate throwaway test secrets
+        run: |
+          for name in JWT_SECRET OTP_HMAC_SECRET SMS_OUTBOX_ENCRYPTION_KEY; do
+            value=$(openssl rand -base64 32)
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+
+      # build = compile + all tests + bootJar.
+      - run: ./gradlew --no-daemon build
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: backend/build/reports/tests/test
 
   docker:
     name: Docker image builds
