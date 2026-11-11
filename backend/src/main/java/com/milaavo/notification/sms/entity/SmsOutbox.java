@@ -35,9 +35,11 @@ public class SmsOutbox {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Builder.Default
     private SmsOutboxStatus status = SmsOutboxStatus.PENDING;
 
     @Column(name = "attempt_count", nullable = false)
+    @Builder.Default
     private int attemptCount = 0;
 
     @Column(name = "next_attempt_at", nullable = false)

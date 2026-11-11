@@ -18,7 +18,6 @@ import com.milaavo.auth.dto.ResentVerificationOTPResponse;
 import com.milaavo.auth.dto.StartVerificationRequest;
 import com.milaavo.auth.dto.StartVerificationResponse;
 
-import com.milaavo.auth.dto.AuthSession;
 import com.milaavo.auth.service.RefreshTokenService;
 import org.springframework.http.HttpHeaders;
 

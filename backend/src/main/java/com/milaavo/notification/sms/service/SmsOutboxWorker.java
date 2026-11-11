@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import com.milaavo.notification.sms.dto.ClaimedMessage;
 
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor

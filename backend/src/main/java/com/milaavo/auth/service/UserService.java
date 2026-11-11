@@ -2,7 +2,6 @@ package com.milaavo.auth.service;
 
 import com.milaavo.auth.dto.AuthSession;
 import com.milaavo.auth.dto.LoginRequest;
-import com.milaavo.auth.dto.LoginResponse;
 import com.milaavo.auth.dto.RegisterRequest;
 import com.milaavo.auth.dto.RegisterResponse;
 import com.milaavo.auth.dto.ResentVerificationOTPRequest;

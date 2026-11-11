@@ -4,9 +4,7 @@ package com.milaavo.otp.service.impl;
 import com.milaavo.auth.entity.User;
 import com.milaavo.auth.repository.UserRepository;
 import com.milaavo.config.DemoProperties;
-import com.milaavo.notification.sms.event.OtpSmsEvent;
 import com.milaavo.notification.sms.service.SmsOutboxService;
-import com.milaavo.notification.sms.service.SmsSender;
 import com.milaavo.otp.entity.OtpChallenge;
 import com.milaavo.otp.enums.OtpPurpose;
 import com.milaavo.otp.enums.OtpVerificationResult;
@@ -14,7 +12,6 @@ import com.milaavo.otp.exception.InvalidOtpException;
 import com.milaavo.otp.repository.OtpChallengeRepository;
 import jakarta.transaction.Transactional;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.milaavo.otp.service.OtpService;
 import com.milaavo.otp.service.OtpHasher;
@@ -34,12 +31,10 @@ public class OtpServiceImpl implements OtpService {
 
     private final OtpVerificationTransaction otpVerificationTransaction;
     private final OtpHasher otpHasher;
-    private final ApplicationEventPublisher eventPublisher;
     private final SmsOutboxService smsOutboxService;
 
     private final OtpChallengeRepository otpRepository;
     private final UserRepository userRepository;
-    private final SmsSender smsSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
     private static final Logger log = LoggerFactory.getLogger(OtpServiceImpl.class);
@@ -50,17 +45,13 @@ public class OtpServiceImpl implements OtpService {
             OtpVerificationTransaction otpVerificationTransaction,
             OtpChallengeRepository otpRepository,
             UserRepository userRepository,
-            SmsSender smsSender,
             OtpHasher otpHasher,
-            ApplicationEventPublisher eventPublisher,
             SmsOutboxService smsOutboxService,
             DemoProperties demoProperties) {
         this.otpVerificationTransaction = otpVerificationTransaction;
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
-        this.smsSender = smsSender;
         this.otpHasher = otpHasher;
-        this.eventPublisher = eventPublisher;
         this.smsOutboxService = smsOutboxService;
         this.demoProperties = demoProperties;
         if (demoProperties.showOtp()) {
