@@ -6,7 +6,8 @@
 - `GlobalExceptionHandler` logs unexpected exceptions with a stack trace and returns a generic 500.
 - The outbox logs failed attempts (`id`, attempt n of 5), recovered row counts, and per-message processor crashes.
 - `GET /api/health` returns a static `UP`.
-- No metrics, no tracing, no correlation id, no Actuator.
+- Actuator health only (11 Nov 2026): `/actuator/health`, `/actuator/health/liveness` and `/actuator/health/readiness` are public; every other Actuator endpoint is not exposed. See below.
+- No metrics, no tracing, no correlation id.
 
 ## Logging (Proposed)
 
@@ -44,7 +45,9 @@
 | DB pool exhaustion | pending connections > 0 for 1 min | Slow queries, long transactions |
 | 5xx rate | > 1 % for 5 min | Logs by correlation id |
 
-## Health, liveness and readiness (Proposed)
+## Health, liveness and readiness (Implemented)
+
+Config in `application.yml`: `management.endpoints.web.exposure.include: health`, `endpoint.health.probes.enabled: true`, `show-details: never`, and `group.readiness.include: readinessState,db`. The compose healthcheck and Render's health check both call readiness. Graceful shutdown is on by default in Spring Boot 3.4+.
 
 - **Liveness** (`/actuator/health/liveness`): the process can serve. No dependency checks, otherwise a DB blip would make the orchestrator restart every pod.
 - **Readiness** (`/actuator/health/readiness`): includes the database. Take the instance out of the load balancer if it cannot reach PostgreSQL.

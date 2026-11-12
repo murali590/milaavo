@@ -2,7 +2,9 @@
 
 Milaavo reunites people with what they lost. Owners report lost items, finders report found items, and Milaavo matches the two using rules and, later, AI image understanding. It then connects both people privately so the item can be returned. See the [vision](docs/product/vision.md) and [requirements](docs/product/requirements.md).
 
-**What exists today** (phase 0): users register with a mobile number, verify it with an SMS OTP, log in to get a JWT, and create, read, update and delete lost-item reports. Found reports, matching, claims, the web UI, cloud deployment and AI are planned.
+**Live demo:** https://milaavo.vercel.app. Click **"Use demo account"** on the login page, or register: the demo shows the OTP on screen instead of sending an SMS. The backend runs on a free host that sleeps when idle, so the first request after a quiet spell can take up to a minute.
+
+**What exists today:** a React web app and a Spring Boot API. Users register with a mobile number, verify it with an OTP, and log in (short-lived JWT access token plus a rotating refresh token in an `HttpOnly` cookie). They create, read, update and delete their own reports of type Lost, Found or Swapped. CI runs on every push, and the app is deployed (Vercel + Render + Neon, see [08](docs/design/08-configuration-deployment.md#live-deployment-implemented-12-nov-2026)). Matching, claims and AI are planned.
 
 The project is also a learning vehicle for SDE3 interview preparation. The design docs explain *why* each decision was made, which failure modes exist, and which parts are still proposals.
 
@@ -60,7 +62,7 @@ cp .env.example .env
 | `OTP_HMAC_SECRET` | yes | **Base64**-encoded, at least 32 bytes after decoding (`OtpConfig`). Use a different value from `JWT_SECRET`. |
 | `SMS_OUTBOX_ENCRYPTION_KEY` | yes | **Base64**, exactly 32 bytes decoded (AES-256). Encrypts SMS outbox messages. Use its own value, and never change it while SMS are pending |
 | `REFRESH_COOKIE_SECURE` | no | Default `true`. Set `false` only for local Safari over plain http |
-| `SPRING_PROFILES_ACTIVE` | yes | Use `local`. Today the only `SmsSender` implementation is `LocalSmsSender` (`@Profile("local")`), so any other profile fails at startup with a missing bean. |
+| `SPRING_PROFILES_ACTIVE` | yes | Use `local`. `demo` is for the public deployment only (it shows the OTP in API responses and seeds a demo account). These are the only profiles with an `SmsSender` (`LocalSmsSender`), so any other profile fails at startup with a missing bean. |
 
 Generate secrets with:
 
@@ -104,13 +106,23 @@ curl -s -X POST localhost:8091/api/auth/login -H 'Content-Type: application/json
 curl -s localhost:8091/api/reports -H "Authorization: Bearer <accessToken>"
 ```
 
+### Or run it with Docker
+
+From `backend/`, with `.env` filled in (`DB_PASSWORD` must not be empty, because the Postgres image refuses an empty password):
+
+```bash
+docker compose up --build
+```
+
+This starts PostgreSQL 17 (on host port 5433) and the backend (on 8091). The backend waits until the database is healthy. `docker compose down` stops both; `docker compose down -v` also deletes the data.
+
 ### 5. Tests
 
 ```bash
-./gradlew test
+./scripts/run-local.sh test
 ```
 
-`ReportControllerTest` and `ReportServiceImplTest` are unit/slice tests. `MilaavoApplicationTests.contextLoads` starts the full context, so it needs the database and the environment variables above (run it through `./scripts/run-local.sh test`).
+24 tests: `ReportServiceImplTest`, `RefreshTokenServiceTest` (unit), `ReportControllerTest` (`@WebMvcTest` with the real security config), and `MilaavoApplicationTests.contextLoads`, which starts the full app and needs the database and the environment variables above. CI (`.github/workflows/ci.yml`) runs the same `./gradlew build` against a Postgres service container on every push and pull request.
 
 ## API summary
 
@@ -169,15 +181,15 @@ Backend packages (`backend/src/main/java/com/milaavo`):
 ├── auth/                 register, login, verify mobile, resend OTP, JWT issuing
 ├── otp/                  OTP challenge issue/verify, HMAC hashing, resend limits
 ├── notification/sms/     outbox entity, enqueue, claim, process, recover, SmsSender, message encryption
-├── report/               lost-item report CRUD and pagination
+├── report/               report CRUD (Lost / Found / Swapped), owner check, type filter, pagination
 ├── common/dto/           ApiErrorResponse
 ├── common/security/      AuthUser, @CurrentUser, JWT → AuthUser converter, AES-GCM cipher
-├── config/               security filter chain, CORS, JWT, password encoder, 401/403 JSON
+├── config/               security filter chain, CORS, JWT, password encoder, 401/403 JSON, demo profile seeder
 ├── exception/            GlobalExceptionHandler and shared exceptions
 └── health/               /api/health
 ```
 
-Liquibase: `backend/src/main/resources/db/changelog` (master + changesets 001–012).
+Liquibase: `backend/src/main/resources/db/changelog` (master + changesets 001–014).
 
 ## Documentation
 

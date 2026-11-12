@@ -1,6 +1,6 @@
 # 10. Frontend (web app)
 
-*Started 25 Oct 2026. Status: F1–F7 done (7 Nov 2026), refresh-token session done (10 Nov 2026); next is deployment, then F8. Product scope: [requirements](../product/requirements.md).*
+*Started 25 Oct 2026. Status: F1–F7 done (7 Nov 2026), refresh-token session done (10 Nov 2026), deployed at https://milaavo.vercel.app (12 Nov 2026, see [08](08-configuration-deployment.md#live-deployment-implemented-12-nov-2026)); next is F8. Product scope: [requirements](../product/requirements.md).*
 
 One responsive web app that works well in phone browsers. No native apps (see [vision](../product/vision.md#non-goals-for-now)).
 
@@ -17,7 +17,7 @@ One responsive web app that works well in phone browsers. No native apps (see [v
 | HTTP client | axios | Interceptors for the token and for 401, a base URL and timeout in one place, and errors for every non-2xx response |
 | Server data | TanStack Query | Caching, loading and error states, retries, and refetch after changes. Avoids hand-written `useEffect` fetching everywhere |
 | Forms | react-hook-form + zod | Form state without re-render storms; zod rules mirror the backend limits (item name 200, city 100, description 2000, password 12–72) |
-| API address | `VITE_API_BASE_URL` (dev: `http://localhost:8091`) | Calls go cross-origin on purpose, so the CORS allow-list (G-27) is exercised from day one. In production the value changes, not the code |
+| API address | `VITE_API_BASE_URL` (dev: `http://localhost:8091`; production: empty, see `.env.production`) | In dev, calls go cross-origin on purpose, so the CORS allow-list (G-27) is exercised. In production, Vercel proxies `/api`, so calls are same-origin and the `SameSite=Strict` refresh cookie works |
 
 ## UI theme
 
@@ -127,4 +127,4 @@ Notes from building it:
 - F7: reports have a type (Lost, Found, Swapped) with metadata in `REPORT_TYPE_INFO`; delete uses a native `<dialog>` and treats 404 as already deleted.
 - Adding or changing routes needs a full page reload in dev: `RouterProvider` keeps the router it started with.
 
-Next: deployment (the cookie needs the frontend and API on the same site, see [08](08-configuration-deployment.md#deployment-checklist)), then F8. Later: found-item details, photos, matching and claims.
+Next: F8. Deployment is done (Vercel proxies `/api` to Render so the cookie is same-site, see [08](08-configuration-deployment.md#live-deployment-implemented-12-nov-2026)). Later: found-item details, photos, matching and claims.
