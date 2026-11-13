@@ -36,6 +36,9 @@ spring:
 
 app:
 
+  # Which commit is running. Render sets RENDER_GIT_COMMIT; any other host can set APP_VERSION.
+  version: ${APP_VERSION:${RENDER_GIT_COMMIT:local}}
+
   demo:
     # Never true outside the free demo. Turned on only in application-demo.yml.
     show-otp: false
