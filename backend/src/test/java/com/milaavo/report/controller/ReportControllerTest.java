@@ -53,7 +53,8 @@ class ReportControllerTest {
     @MockitoBean
     private ReportService reportService;
 
-    // Fake the signature check only. Our real SecurityConfig and AuthUserJwtConverter still run.
+    // Fake the signature check only. Our real SecurityConfig and
+    // AuthUserJwtConverter still run.
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
@@ -75,7 +76,7 @@ class ReportControllerTest {
     void noToken_gives401InOurErrorShape() throws Exception {
         mockMvc.perform(get("/api/reports"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+                .andExpect(jsonPath("$.error").value("BROKEN_ON_PURPOSE"));
 
         verifyNoInteractions(reportService);
     }
@@ -85,12 +86,12 @@ class ReportControllerTest {
         when(reportService.createReport(eq(me), any(CreateReportRequest.class))).thenReturn(response());
 
         mockMvc.perform(post("/api/reports")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                { "type": "LOST", "itemName": "Black wallet",
-                                  "description": "Leather wallet", "city": "Bengaluru" }
-                                """))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        { "type": "LOST", "itemName": "Black wallet",
+                          "description": "Leather wallet", "city": "Bengaluru" }
+                        """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reportId").value(reportId.toString()))
                 .andExpect(jsonPath("$.type").value("LOST"));
@@ -101,11 +102,11 @@ class ReportControllerTest {
     @Test
     void createReport_withBlankNameAndNoType_gives400WithFieldErrors() throws Exception {
         mockMvc.perform(post("/api/reports")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                { "itemName": " ", "description": "Leather wallet", "city": "Bengaluru" }
-                                """))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        { "itemName": " ", "description": "Leather wallet", "city": "Bengaluru" }
+                        """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.fieldErrors.itemName").value("Item name is required"))
@@ -120,8 +121,8 @@ class ReportControllerTest {
                 .thenReturn(new PagedResponse<>(List.of(response()), 0, 10, 1, 1, true, true));
 
         mockMvc.perform(get("/api/reports")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
-                        .param("type", "FOUND"))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                .param("type", "FOUND"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
@@ -129,8 +130,8 @@ class ReportControllerTest {
     @Test
     void getAllReports_withSizeOver100_gives400() throws Exception {
         mockMvc.perform(get("/api/reports")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
-                        .param("size", "101"))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
+                .param("size", "101"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
     }
@@ -138,7 +139,7 @@ class ReportControllerTest {
     @Test
     void getReportById_withNonUuid_gives400() throws Exception {
         mockMvc.perform(get("/api/reports/not-a-uuid")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_PARAMETER"));
     }
@@ -148,7 +149,7 @@ class ReportControllerTest {
         doThrow(new ReportNotFoundException(reportId)).when(reportService).deleteReport(me, reportId);
 
         mockMvc.perform(delete("/api/reports/{id}", reportId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("REPORT_NOT_FOUND"));
     }
@@ -156,7 +157,7 @@ class ReportControllerTest {
     @Test
     void deleteReport_mine_gives204() throws Exception {
         mockMvc.perform(delete("/api/reports/{id}", reportId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN))
                 .andExpect(status().isNoContent());
 
         verify(reportService).deleteReport(me, reportId);
