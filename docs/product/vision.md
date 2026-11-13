@@ -37,9 +37,9 @@ When someone loses a wallet, a phone, keys, a bag or a document, the person who 
 - G3: Never expose a user's phone number or exact address without that user's explicit consent.
 - G4: Every completed return leaves an auditable trail: match → claim → verification → handover.
 
-### Learning and career goals (equally important)
+### Engineering learning goals
 
-This project is also how the owner prepares for SDE3 interviews and for a DevOps/cloud-heavy role. Each product feature is chosen because it also teaches something interviewers ask about:
+The project is also a deliberate learning exercise. Each feature is chosen because it also exercises an important engineering skill:
 
 | Learning goal | Where the product forces it |
 |---|---|
@@ -54,7 +54,7 @@ This project is also how the owner prepares for SDE3 interviews and for a DevOps
 | Constraint | Consequence |
 |---|---|
 | **Zero running cost** | No paid SMS, no paid AI API by default, free-tier or self-hosted infrastructure only. Every external dependency sits behind an interface so a paid provider can be added later without redesign |
-| **Solo developer, about 10 h per week** | Modular monolith. Small vertical slices. Features must not crowd out interview preparation |
+| **Solo developer, about 10 h per week** | Modular monolith. Small vertical slices |
 | **Web first** | One responsive web app that works well in mobile browsers. Native apps are out of scope |
 | **Real deployment** | It must run on the public internet with HTTPS, so DevOps practice is real and not simulated |
 
@@ -86,10 +86,10 @@ Product (measured once it is deployed with test users):
 - Completed returns.
 - Zero incidents of personal data being exposed.
 
-Learning (tracked in the [evidence log](../sde3/evidence-log.md)):
+Learning:
 
 - The deployed app is reachable over HTTPS, with CI/CD deploying on merge.
-- You can explain the matching pipeline, the AI fallback and the claim state machine in a mock system-design round.
+- You can explain the matching pipeline, the AI fallback and the claim state machine in a system-design discussion.
 - Infrastructure is reproducible from code (Terraform/Ansible) and documented in a runbook.
 
 ## Phases
@@ -109,7 +109,7 @@ Phases 3 and 4 can overlap. Deploy early, even before AI, so every later feature
 
 | Risk | Mitigation |
 |---|---|
-| Scope creep crowds out interview preparation | Phase gates, time-boxed weeks, the roadmap comes first |
+| Scope creep on a solo project | Phase gates, small vertical slices, time-boxed weeks |
 | False claims or fraud | Hidden-detail verification, claim limits, reporting and moderation |
 | Personal data in photos (ID cards, faces, addresses) | Warn at upload, keep exact details private, plan for blur/redaction |
 | Physical safety at handover | Suggest public places or police stations, never share an address automatically |

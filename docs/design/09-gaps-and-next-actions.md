@@ -65,4 +65,3 @@ Priority: **P0** = security or correctness that would block production, **P1** =
 6. **G-25 test session**, which also locks in everything above.
 7. The remaining P2 cleanup items.
 
-Record each fix in the [evidence log](../sde3/evidence-log.md): what broke, how you proved it, and how you fixed it.

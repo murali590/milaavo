@@ -77,7 +77,7 @@ Verified on 12 Nov 2026 through the proxy: deep link returns `index.html`; login
 
 ### CD and rollback (Implemented, 13 Nov 2026)
 
-- **Deploy gate:** Render's Auto-Deploy is **After CI Checks Pass**, so a push to `main` deploys only when every GitHub check on that commit is green. Tested: a commit with a deliberately failing test (`d409915`) turned CI red and was never deployed; it was undone with `git revert` (never `reset` + force push on a shared branch).
+- **Deploy gate:** Render's Auto-Deploy is **After CI Checks Pass**, so a push to `main` deploys only when every GitHub check on that commit is green. Tested: a commit with a deliberately failing test turned CI red and was never deployed; it was undone with `git revert` (never `reset` + force push on a shared branch).
 - **Which version is running:** `GET /api/health` returns `version`, read from `app.version: ${APP_VERSION:${RENDER_GIT_COMMIT:local}}`. Locally it says `local`.
 - **Vercel** deploys every push. Its build runs `tsc` + `vite build`, so a type error fails the build and the previous version keeps serving. Lint is checked only in CI.
 - **Rollback drill done:** Render → Events → **Rollback** reuses the image already built for that deploy (no rebuild, about a minute). Render then **turns Auto-Deploy off**, so the next push doesn't silently bring the bad version back; set it back to *After CI Checks Pass* after rolling forward. Vercel → Deployments → **Instant Rollback** just points the domain at older files; new pushes are not promoted until you promote the latest deployment again.

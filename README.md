@@ -6,7 +6,7 @@ Milaavo reunites people with what they lost. Owners report lost items, finders r
 
 **What exists today:** a React web app and a Spring Boot API. Users register with a mobile number, verify it with an OTP, and log in (short-lived JWT access token plus a rotating refresh token in an `HttpOnly` cookie). They create, read, update and delete their own reports of type Lost, Found or Swapped. CI runs on every push, and the app is deployed (Vercel + Render + Neon, see [08](docs/design/08-configuration-deployment.md#live-deployment-implemented-12-nov-2026)). Matching, claims and AI are planned.
 
-The project is also a learning vehicle for SDE3 interview preparation. The design docs explain *why* each decision was made, which failure modes exist, and which parts are still proposals.
+The design docs explain *why* each decision was made, which failure modes exist, and which parts are still proposals.
 
 > **Evidence labels used in all docs**
 > - **Implemented**: verified in the current code on `main` (including uncommitted work at the time of writing, 24 Oct 2026).
@@ -172,7 +172,7 @@ Hard-coded values that should become configuration are listed in [docs/design/09
 milaavo/
 ├── backend/              Spring Boot API (Gradle project: build.gradle, gradlew, src/, scripts/, .env)
 ├── frontend/             React + TypeScript web app (Vite)
-└── docs/                 product, design, runbook and SDE3 docs
+└── docs/                 product, design and runbook docs
 ```
 
 Backend packages (`backend/src/main/java/com/milaavo`):
@@ -214,10 +214,3 @@ Liquibase: `backend/src/main/resources/db/changelog` (master + changesets 001–
 **Runbook**
 
 - [SMS outbox runbook](docs/runbook/sms-outbox.md): diagnostic SQL and recovery steps
-
-**SDE3 preparation**
-
-- [12-week roadmap](docs/sde3/roadmap.md)
-- [Concept checklist](docs/sde3/concept-checklist.md)
-- [Interview prompts, answered with Milaavo](docs/sde3/interview-prompts.md)
-- [Weekly evidence log](docs/sde3/evidence-log.md)

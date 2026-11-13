@@ -2,7 +2,7 @@
 
 *Version 0.1, 24 Oct 2026. Status: draft. Read with [vision.md](vision.md).*
 
-Requirement ids are stable. Use them in commits, PRs and the [evidence log](../sde3/evidence-log.md). Priority: **M** = must have for the phase, **S** = should, **C** = could. **Status** shows what exists today.
+Requirement ids are stable. Use them in commits and PRs. Priority: **M** = must have for the phase, **S** = should, **C** = could. **Status** shows what exists today.
 
 ---
 
@@ -366,7 +366,6 @@ Ask the AI for **structured JSON output** (category, colours, brand, marks, desc
 | **4. AI** | FR-AI-1…10 | Photo upload pre-fills attributes. Image similarity appears as a match reason. precision@5 measured on the labelled set before and after AI. Matching still works with the AI service stopped |
 | **5. Hardening** | FR-ADMIN-*, FR-CLAIM-8, NFR-PRIV-2, rate limits, load test | Moderation works. Retention jobs run. Load test results recorded |
 
-Suggested mapping onto the [12-week roadmap](../sde3/roadmap.md#product-phases-on-the-roadmap): Phase 1 in weeks 3–5, Phase 2 in weeks 6–8, Phase 3 in weeks 9–11, Phase 4 starts in weeks 10–12 and continues after the job switch if needed. Interview preparation takes priority whenever the two compete.
 
 ---
 
