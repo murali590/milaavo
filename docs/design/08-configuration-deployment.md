@@ -75,6 +75,14 @@ Browser ──▶ https://milaavo.vercel.app/          React build on Vercel's C
 
 Verified on 12 Nov 2026 through the proxy: deep link returns `index.html`; login returns 200 with `milaavo_rt; Path=/api/auth; Secure; HttpOnly; SameSite=Strict`; refresh with the cookie 200; logout 204; login with `Origin: https://evil.example` 403; the production bundle contains no `localhost:8091`.
 
+### CD and rollback (Implemented, 13 Nov 2026)
+
+- **Deploy gate:** Render's Auto-Deploy is **After CI Checks Pass**, so a push to `main` deploys only when every GitHub check on that commit is green. Tested: a commit with a deliberately failing test (`d409915`) turned CI red and was never deployed; it was undone with `git revert` (never `reset` + force push on a shared branch).
+- **Which version is running:** `GET /api/health` returns `version`, read from `app.version: ${APP_VERSION:${RENDER_GIT_COMMIT:local}}`. Locally it says `local`.
+- **Vercel** deploys every push. Its build runs `tsc` + `vite build`, so a type error fails the build and the previous version keeps serving. Lint is checked only in CI.
+- **Rollback drill done:** Render → Events → **Rollback** reuses the image already built for that deploy (no rebuild, about a minute). Render then **turns Auto-Deploy off**, so the next push doesn't silently bring the bad version back; set it back to *After CI Checks Pass* after rolling forward. Vercel → Deployments → **Instant Rollback** just points the domain at older files; new pushes are not promoted until you promote the latest deployment again.
+- **What can't be rolled back:** the database schema. Liquibase changes are rolled **forward** with a new changeset (never edit an applied one). Schema changes follow **expand → migrate → contract**, so the previous app version always works with the current schema, and an app rollback stays safe.
+
 **At scale on AWS (not built, for comparison):** S3 + CloudFront for the frontend, a CloudFront `/api/*` behaviour to the backend (the same same-site trick), ECS Fargate in private subnets behind an ALB across 2 AZs, RDS PostgreSQL Multi-AZ, secrets in Secrets Manager, images in ECR, and GitHub Actions deploying through OIDC with no stored AWS keys.
 
 ## Deployment checklist
